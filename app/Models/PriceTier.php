@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Customer extends Model
+class PriceTier extends Model
 {
     /**
      * The attributes that are mass assignable.
@@ -13,10 +13,11 @@ class Customer extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'code',
         'name',
-        'whatsapp_number',
-        'address',
-        'borrowed_gallons',
+        'price',
+        'applies_to',
+        'is_active',
     ];
 
     /**
@@ -27,12 +28,16 @@ class Customer extends Model
     protected function casts(): array
     {
         return [
-            'borrowed_gallons' => 'integer',
+            'price' => 'decimal:2',
+            'is_active' => 'boolean'
         ];
     }
 
-    public function orders(): HasMany
+    /**
+     * Get the order items associated with the price tier.
+     */
+    public function orderItems(): HasMany
     {
-        return $this->hasMany(Order::class);
-    }
+        return $this->hasMany(OrderItem::class);
+    }        
 }
