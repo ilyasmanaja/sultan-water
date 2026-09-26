@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained('customers');
             $table->enum('order_type', ['ambil_sendiri', 'pesan_antar']);
-            $table->enum('delivery_status', ['pending', 'diantar', 'selesai'])->default('pending');
+            $table->enum('delivery_status', ['pending', 'diantar', 'selesai', 'batal'])->default('pending');
             $table->enum('payment_method', ['tunai', 'qris']);
             $table->enum('payment_status', ['lunas', 'belum_lunas'])->default('lunas');
             $table->decimal('total_amount', 12, 2)->default(0.00);
