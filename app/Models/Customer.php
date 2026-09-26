@@ -17,4 +17,16 @@ class Customer extends Model
         'address',
         'borrowed_gallons',
     ];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var list<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'borrowed_gallons' => 'integer',
+        ]; 
+    }
 }
