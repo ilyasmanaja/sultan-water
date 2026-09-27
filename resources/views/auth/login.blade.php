@@ -15,13 +15,21 @@
         
         <!-- Header / Branding -->
         <div class="text-center mb-6">
-            <img src="assets/img/logo.png" alt="Logo Sulthan Air Rebus" class="h-20 w-auto mx-auto mb-2 drop-shadow-sm">
+            <img src="{{ asset('assets/img/logo.png') }}" alt="Logo Sulthan Air Rebus" class="h-20 w-auto mx-auto mb-2 drop-shadow-sm">
             <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Sultan Water POS</h1>
             <p class="text-xs text-slate-500 mt-1">Sistem Operasional Depot Sulthan Air Rebus</p>
         </div>
 
+        <!-- Alert Pesan Error Umum / Session Status -->
+        @if (session('status'))
+            <div class="mb-4 text-xs font-semibold text-green-600 bg-green-50 p-3 rounded-xl border border-green-200">
+                {{ session('status') }}
+            </div>
+        @endif
+
         <!-- Form Login -->
-        <form action="/login" method="POST" class="space-y-5">
+        <form action="{{ route('login') }}" method="POST" class="space-y-5">
+            @csrf
 
             <!-- Input Username -->
             <div>
@@ -36,12 +44,16 @@
                         type="text" 
                         id="username" 
                         name="username" 
+                        value="{{ old('username') }}"
                         required 
                         autofocus
                         placeholder="Masukkan username"
-                        class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
+                        class="w-full pl-11 pr-4 py-3 bg-slate-50 border @error('username') border-red-500 @else border-slate-200 @enderror rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
                     >
                 </div>
+                @error('username')
+                    <p class="text-red-500 text-xs mt-1.5 font-medium">{{ $message }}</p>
+                @enderror
             </div>
 
             <!-- Input Password dengan Toggle Mata -->
@@ -59,7 +71,7 @@
                         name="password" 
                         required 
                         placeholder="••••••••"
-                        class="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
+                        class="w-full pl-11 pr-12 py-3 bg-slate-50 border @error('password') border-red-500 @else border-slate-200 @enderror rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
                     >
                     <button 
                         type="button" 
@@ -69,6 +81,9 @@
                         <i class="fas fa-eye text-sm" id="eyeIcon"></i>
                     </button>
                 </div>
+                @error('password')
+                    <p class="text-red-500 text-xs mt-1.5 font-medium">{{ $message }}</p>
+                @enderror
             </div>
 
             <!-- Tombol Submit -->
@@ -83,21 +98,19 @@
 
         <!-- Footer Card -->
         <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-            <a href="index.html" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-blue-600 transition">
+            <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-blue-600 transition">
                 <i class="fas fa-arrow-left"></i> Kembali ke Landing Page
             </a>
         </div>
 
     </div>
 
-    <!-- Pemanggilan File JS Eksternal -->
-     <!-- Pemanggilan JS Langsung -->
+    <!-- Script Toggle Password -->
     <script>
         document.getElementById('togglePassword').addEventListener('click', function () {
             const passwordInput = document.getElementById('password');
             const eyeIcon = document.getElementById('eyeIcon');
             
-            // Cek tipe input saat ini
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 eyeIcon.classList.remove('fa-eye');
@@ -109,7 +122,5 @@
             }
         });
     </script>
-</body>
-</html>
 </body>
 </html>

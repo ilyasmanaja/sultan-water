@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sulthan Air Rebus - Air Minum Isi Ulang Higienis & Sehat</title>
-    <!-- Tailwind CSS Via CDN / Vite -->
+    <!-- Tailwind CSS Via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased pb-16 md:pb-0">
 
     <!-- 1. NAVIGATION BAR -->
     <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm">
@@ -18,7 +18,7 @@
             <!-- Logo & Nama Depot -->
             <div class="flex items-center space-x-3">
                 <img src="assets/img/logo.png" alt="Sulthan Air Rebus Logo" class="h-10 w-auto">
-                <span class="text-xl font-bold text-blue-900 tracking-tight">Sulthan <span class="text-red-600">Air
+                <span class="text-xl font-bold text-red-600  tracking-tight">Sulthan <span class="text-blue-900">Air
                         Rebus</span></span>
             </div>
 
@@ -32,15 +32,13 @@
                 <a href="#lokasi" class="hover:text-blue-600 transition">Lokasi</a>
             </nav>
 
-            <!-- CTA WA & Portal Login -->
-            <div class="flex items-center space-x-3">
-                <a href="https://wa.me/6282386939554?text=Halo%20Sulthan%20Air%20Rebus,%20saya%20ingin%20pesan%20air.%0ANama%20Pemesan:%20%0AAlamat/Patokan:%20%0AJumlah%20Galon:%20%0AStatus%20Galon:%20(Tukar/Pinjam)"
+            <!-- CTA WA Desktop Header -->
+            <div class="hidden md:flex items-center">
+                <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20ingin%20memesan%20galon%20antar%20dengan%20data%20berikut:%0A%0ANama%20Pemesan:%20%0AAlamat%20/%20Patokan:%20%0AJenis%20Pesanan:%20(Isi%20Ulang%20Galon%20/%20Beli%20Galon%20Baru%20%2B%20Isi)%0ABawa%20Galon%20Kosong%20untuk%20Ditukar:%20(Ya%20/%20Tidak%20-%20Pinjam%20Galon%20Depot)%0AJumlah%20Galon:%20%20Galon%0A%0AMohon%20konfirmasi%20dan%20estimasi%20pengantarannya.%20Terima%20kasih."
                     target="_blank"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-full shadow-md transition flex items-center gap-2">
                     <i class="fab fa-whatsapp text-lg"></i> Pesan Antar
                 </a>
-                <a href="login.html" class="text-sm font-semibold text-slate-600 hover:text-blue-600 px-3 py-2">Masuk
-                    POS</a>
             </div>
         </div>
     </header>
@@ -54,21 +52,23 @@
                 </h1>
                 <p class="text-slate-600 text-base md:text-lg leading-relaxed">
                     Menggunakan sistem depot modern (filterisasi media) dan dimasak langsung pada suhu
-                    <strong>100°C</strong>. Memastikan air layak, aman, dan menyehatkan untuk seluruh keluarga
-                    Anda.
+                    <strong>100°C</strong>. Memastikan air layak, aman, dan menyehatkan untuk seluruh keluarga Anda.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                    <a href="https://wa.me/6282386939554?text=Halo%20Sulthan%20Air%20Rebus,%20saya%20ingin%20pesan%20air.%0ANama%20Pemesan:%20%0AAlamat/Patokan:%20%0AJumlah%20Galon:%20%0AStatus%20Galon:%20(Tukar/Pinjam)"
+                    <!-- CTA 1: Pesan Antar Hero -->
+                    <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20ingin%20memesan%20galon%20antar%20dengan%20data%20berikut:%0A%0ANama%20Pemesan:%20%0AAlamat%20/%20Patokan:%20%0AJenis%20Pesanan:%20(Isi%20Ulang%20Galon%20/%20Beli%20Galon%20Baru%20%2B%20Isi)%0ABawa%20Galon%20Kosong%20untuk%20Ditukar:%20(Ya%20/%20Tidak%20-%20Pinjam%20Galon%20Depot)%0AJumlah%20Galon:%20%20Galon%0A%0AMohon%20konfirmasi%20dan%20estimasi%20pengantarannya.%20Terima%20kasih."
                         target="_blank"
                         class="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition">
                         Pesan Antar Sekarang
                     </a>
-                    <a href="#pemasangan"
-                        class="border border-slate-300 text-slate-700 text-center font-semibold px-7 py-3.5 rounded-xl hover:bg-slate-100 transition">
-                        Pemasangan Depot
+                    <!-- CTA 2: Pemasangan Depot Hero -->
+                    <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20berminat%20untuk%20konsultasi%20/%20memesan%20Jasa%20Pemasangan%20Depot%20Air%20Minum.%0A%0ANama%20Pemohon:%20%0ALokasi%20/%20Kota%20Rencana%20Pemasangan:%20%0AEstimasi%20Target%20Pembukaan:%20"
+                        target="_blank"
+                        class="inline-flex items-center gap-2 bg-white text-blue-900 font-bold px-8 py-3.5 rounded-xl shadow-md hover:bg-blue-50 transition">
+                        <i class="fab text-lg text-green-600"></i> Konsultasi Pemasangan Depot
                     </a>
                 </div>
-                <!-- Mini Stats (Nomor Legalitas Saja) -->
+                <!-- Mini Stats -->
                 <div class="pt-6 border-t border-slate-200 grid grid-cols-2 gap-4">
                     <div>
                         <p class="text-xs text-slate-500">Izin Kemenkes NIB</p>
@@ -145,7 +145,7 @@
         </div>
     </section>
 
-    <!-- 4. LAYANAN & PILIHAN PESAN (TANPA MENCANTUMKAN HARGA) -->
+    <!-- 4. LAYANAN & PILIHAN PESAN -->
     <section id="layanan" class="py-20 bg-slate-50">
         <div class="max-w-7xl mx-auto px-6">
             <div class="text-center max-w-2xl mx-auto mb-16">
@@ -169,16 +169,17 @@
                                 cepat langsung di lokasi</li>
                         </ul>
                     </div>
-                    <a href="https://wa.me/6282386939554?text=Halo%20Sulthan%20Air%20Rebus,%20saya%20ingin%20pesan%20air.%0ANama%20Pemesan:%20%0AAlamat/Patokan:%20%0AJumlah%20Galon:%20%0AStatus%20Galon:%20(Tukar/Pinjam)"
+                    <!-- CTA Info Kedai -->
+                    <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20ingin%20memesan%20galon%20antar%20dengan%20data%20berikut:%0A%0ANama%20Pemesan:%20%0AAlamat%20/%20Patokan:%20%0AJenis%20Pesanan:%20Beli%20Galon%20Baru%20%2B%20Isi%0ABawa%20Galon%20Kosong%20untuk%20Ditukar:%20Tidak%0AJumlah%20Galon:%20%20Galon%0A%0AMohon%20konfirmasi%20dan%20estimasi%20pengantarannya.%20Terima%20kasih."
                         target="_blank"
-                        class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition">Info
-                        Isi Ulang Kedai</a>
+                        class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition">
+                        Info Isi Ulang Kedai
+                    </a>
                 </div>
 
-                <!-- Paket Pesan Antar (BEST SELLER - Posisi Latar Tengah) -->
+                <!-- Paket Pesan Antar (BEST SELLER) -->
                 <div
                     class="bg-blue-900 text-white p-8 rounded-2xl shadow-xl relative border-2 border-blue-600 flex flex-col justify-between">
-                    <!-- Badge Best Seller (Posisi Atas Tengah Card) -->
                     <div
                         class="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-900 text-xs font-extrabold px-4 py-1 rounded-full uppercase tracking-wider shadow-md">
                         <i class="fas fa-star mr-1"></i> Best Seller
@@ -198,8 +199,8 @@
                                 s/d 16:00 WIB</li>
                         </ul>
                     </div>
-                    <!-- CTA Template WA -->
-                    <a href="https://wa.me/6282386939554?text=Halo%20Sulthan%20Air%20Rebus,%20saya%20ingin%20pesan%20air.%0ANama%20Pemesan:%20%0AAlamat/Patokan:%20%0AJumlah%20Galon:%20%0AStatus%20Galon:%20(Tukar/Pinjam)"
+                    <!-- CTA Pesan Antar (Paket Best Seller) -->
+                    <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20ingin%20memesan%20galon%20antar%20dengan%20data%20berikut:%0A%0ANama%20Pemesan:%20%0AAlamat%20/%20Patokan:%20%0AJenis%20Pesanan:%20Isi%20Ulang%20Galon%0ABawa%20Galon%20Kosong%20untuk%20Ditukar:%20(Ya%20/%20Tidak%20-%20Pinjam%20Galon%20Depot)%0AJumlah%20Galon:%20%20Galon%0A%0AMohon%20konfirmasi%20dan%20estimasi%20pengantarannya.%20Terima%20kasih."
                         target="_blank"
                         class="block text-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg transition">
                         Pesan Antar via WA
@@ -220,10 +221,12 @@
                                 Langsung</li>
                         </ul>
                     </div>
-                    <a href="https://wa.me/6282386939554?text=Halo%20Sulthan%20Air%20Rebus,%20saya%20ingin%20pesan%20air.%0ANama%20Pemesan:%20%0AAlamat/Patokan:%20%0AJumlah%20Galon:%20%0AStatus%20Galon:%20(Tukar/Pinjam)"
+                    <!-- CTA Beli Galon Baru -->
+                    <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20ingin%20memesan%20galon%20antar%20dengan%20data%20berikut:%0A%0ANama%20Pemesan:%20%0AAlamat%20/%20Patokan:%20%0AJenis%20Pesanan:%20Beli%20Galon%20Baru%20%2B%20Isi%0ABawa%20Galon%20Kosong%20untuk%20Ditukar:%20Tidak%0AJumlah%20Galon:%20%20Galon%0A%0AMohon%20konfirmasi%20dan%20estimasi%20pengantarannya.%20Terima%20kasih."
                         target="_blank"
-                        class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition">Beli
-                        Galon Baru</a>
+                        class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition">
+                        Beli Galon Baru
+                    </a>
                 </div>
             </div>
         </div>
@@ -253,7 +256,8 @@
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-blue-400"></i>
                             Pendampingan Operasional & Pengujian Kualitas Air</li>
                     </ul>
-                    <a href="https://wa.me/6282386939554?text=Halo%20Sulthan%20Air%20Rebus,%20saya%20berminat%20untuk%20konsultasi%20/%20memesan%20Jasa%20Pemasangan%20Depot%20Air%20Minum.%0A%0ANama%20Pemohon:%20%0ALokasi%20/%20Kota%20Rencana%20Pemasangan:%20%0AJenis%20Depot%20yang%20Diminati:%20(Air%20Rebus%20/%20Isi%20Ulang%20Biasa%20/%20RO)%0AEstimasi%20Target%20Pembukaan:%20"
+                    <!-- CTA Pemasangan Depot -->
+                    <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20berminat%20untuk%20konsultasi%20/%20memesan%20Jasa%20Pemasangan%20Depot%20Air%20Minum.%0A%0ANama%20Pemohon:%20%0ALokasi%20/%20Kota%20Rencana%20Pemasangan:%20%0AEstimasi%20Target%20Pembukaan:%20"
                         target="_blank"
                         class="inline-flex items-center gap-2 bg-white text-blue-900 font-bold px-8 py-3.5 rounded-xl shadow-md hover:bg-blue-50 transition">
                         <i class="fab fa-whatsapp text-lg text-green-600"></i> Konsultasi Pemasangan Depot
@@ -269,13 +273,12 @@
         </div>
     </section>
 
-    <!-- 6. LEGALITAS (HANYA MENCANTUMKAN NOMOR SURAT) -->
+    <!-- 6. LEGALITAS -->
     <section id="legalitas" class="py-20 bg-slate-50">
         <div class="max-w-7xl mx-auto px-6">
             <div class="text-center max-w-2xl mx-auto mb-12">
                 <h2 class="text-3xl font-bold text-slate-900">Kelayakan & Jaminan Kesehatan</h2>
-                <p class="text-slate-600 mt-2">Air minum teruji secara resmi di laboratorium kesehatan pemerintah[cite:
-                    3].</p>
+                <p class="text-slate-600 mt-2">Air minum teruji secara resmi di laboratorium kesehatan pemerintah.</p>
             </div>
 
             <div
@@ -365,7 +368,7 @@
     <footer class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
         <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-8 mb-8">
             <div>
-                <span class="text-xl font-bold text-white tracking-tight">Sulthan <span class="text-red-500">Air
+                <span class="text-xl font-bold text-red-500 tracking-tight">Sulthan <span class="text-blue-500">Air
                         Rebus</span></span>
                 <p class="text-xs text-slate-400 mt-3 leading-relaxed">
                     Sistem informasi & penyedia air minum isi ulang higienis berbasis rebusan 100°C.
@@ -392,6 +395,16 @@
             <p>Sistem Operasional & POS dikembangkan oleh Tim Scrum Sultan Water.</p>
         </div>
     </footer>
+
+    <!-- 9. FLOATING CUSTOMER SERVICE BUTTON (MOBILE) -->
+    <div class="fixed bottom-5 right-5 z-50 md:hidden">
+        <a href="https://wa.me/6282386939554?text=Halo%20Sultan%20Water,%20saya%20ingin%20memesan%20galon%20antar%20dengan%20data%20berikut:%0A%0ANama%20Pemesan:%20%0AAlamat%20/%20Patokan:%20%0AJenis%20Pesanan:%20(Isi%20Ulang%20Galon%20/%20Beli%20Galon%20Baru%20%2B%20Isi)%0ABawa%20Galon%20Kosong%20untuk%20Ditukar:%20(Ya%20/%20Tidak%20-%20Pinjam%20Galon%20Depot)%0AJumlah%20Galon:%20%20Galon%0A%0AMohon%20konfirmasi%20dan%20estimasi%20pengantarannya.%20Terima%20kasih."
+            target="_blank"
+            class="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-3 rounded-full shadow-2xl transition-transform transform active:scale-95 border-2 border-white">
+            <i class="fab fa-whatsapp text-2xl"></i>
+            <span class="text-xs">Chat CS Order</span>
+        </a>
+    </div>
 
 </body>
 
