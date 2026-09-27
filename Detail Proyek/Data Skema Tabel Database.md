@@ -72,17 +72,17 @@ Jenis produk dasar (disederhanakan — harga sekarang murni dari `price_tiers`, 
 
 Header transaksi.
 
-| Kolom                   | Tipe                                | Constraint                    | Keterangan                        |
-| ----------------------- | ----------------------------------- | ----------------------------- | --------------------------------- |
-| id                      | BIGINT UNSIGNED                     | PK, AUTO_INCREMENT            |                                   |
-| customer_id             | BIGINT UNSIGNED                     | NULLABLE, FK → `customers.id` | NULL = Pelanggan Umum             |
-| order_type              | ENUM('ambil_sendiri','pesan_antar') | NOT NULL                      |                                   |
-| delivery_status         | ENUM('pending','diantar','selesai') | NOT NULL, DEFAULT 'pending'   | State machine, transisi berurutan |
-| payment_method          | ENUM('tunai','qris')                | NOT NULL                      |                                   |
-| payment_status          | ENUM('lunas','belum_lunas')         | NOT NULL, DEFAULT 'lunas'     |                                   |
-| total_amount            | DECIMAL(12,2)                       | NOT NULL, DEFAULT 0           | Jumlah seluruh order_items        |
-| created_by              | BIGINT UNSIGNED                     | NOT NULL, FK → `users.id`     | Kasir/kurir yang input            |
-| created_at / updated_at | TIMESTAMP                           | NULLABLE                      |                                   |
+| Kolom                   | Tipe                                         | Constraint                    | Keterangan                        |
+| ----------------------- | -------------------------------------------- | ----------------------------- | --------------------------------- |
+| id                      | BIGINT UNSIGNED                              | PK, AUTO_INCREMENT            |                                   |
+| customer_id             | BIGINT UNSIGNED                              | NULLABLE, FK → `customers.id` | NULL = Pelanggan Umum             |
+| order_type              | ENUM('ambil_sendiri','pesan_antar')          | NOT NULL                      |                                   |
+| delivery_status         | ENUM('pending','diantar','selesai', 'batal') | NOT NULL, DEFAULT 'pending'   | State machine, transisi berurutan |
+| payment_method          | ENUM('tunai','qris')                         | NOT NULL                      |                                   |
+| payment_status          | ENUM('lunas','belum_lunas')                  | NOT NULL, DEFAULT 'lunas'     |                                   |
+| total_amount            | DECIMAL(12,2)                                | NOT NULL, DEFAULT 0           | Jumlah seluruh order_items        |
+| created_by              | BIGINT UNSIGNED                              | NOT NULL, FK → `users.id`     | Kasir/kurir yang input            |
+| created_at / updated_at | TIMESTAMP                                    | NULLABLE                      |                                   |
 
 ---
 
