@@ -27,10 +27,6 @@ Route::middleware(['auth'])->group(function () {
         return view('kasir.dashboard');
     })->name('kasir.dashboard');
 
-    Route::get('/kurir/dashboard', function () {
-        return view('kurir.dashboard');
-    })->name('kurir.dashboard');
-
 });
 
 // --- ROUTE UNTUK TES UI DASHBOARD (TANPA AUTH) ---
@@ -42,9 +38,6 @@ Route::middleware(['auth'])->group(function () {
 //     return view('kasir.dashboard');
 // })->name('kasir.dashboard');
 
-// Route::get('/kurir/dashboard', function () {
-//     return view('kurir.dashboard');
-// })->name('kurir.dashboard');
 
 Route::post('/logout', function () {
     return redirect()->route('login');
