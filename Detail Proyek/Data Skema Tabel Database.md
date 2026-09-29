@@ -144,6 +144,7 @@ Pengeluaran operasional (termasuk biaya penggantian filter — bukan modul terpi
 | Kolom                   | Tipe                                                                          | Constraint                | Keterangan |
 | ----------------------- | ----------------------------------------------------------------------------- | ------------------------- | ---------- |
 | id                      | BIGINT UNSIGNED                                                               | PK, AUTO_INCREMENT        |            |
+| title                   | VARCHAR(100)                                                                  | NOT NULL                  |            |
 | category                | ENUM('air_baku','listrik','bensin','servis','suku_cadang_filter','lain_lain') | NOT NULL                  |            |
 | amount                  | DECIMAL(12,2)                                                                 | NOT NULL                  |            |
 | description             | TEXT                                                                          | NULLABLE                  |            |
