@@ -31,7 +31,7 @@
                 <a href="#keunggulan" class="hover:text-blue-600 transition">Mengapa Kami</a>
                 <a href="#layanan" class="hover:text-blue-600 transition">Layanan Galon</a>
                 <a href="#pemasangan" class="hover:text-blue-600 transition">Pasang Depot</a>
-                <a href="#filter-air" class="hover:text-blue-600 transition text-blue-700 font-semibold">Filter Air
+                <a href="#filter-air" class="hover:text-blue-600 transition">Filter Air
                     Rumah</a>
                 <a href="#legalitas" class="hover:text-blue-600 transition">Legalitas</a>
                 <a href="#lokasi" class="hover:text-blue-600 transition">Lokasi</a>
@@ -195,7 +195,7 @@
     <section id="layanan" class="py-12 md:py-20 bg-slate-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
             <div class="text-center max-w-2xl mx-auto mb-10 md:mb-16">
-                <h2 class="text-2xl md:text-3xl font-bold text-slate-900">Layanan Layar Antar & Isi Ulang</h2>
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-900">Layanan Antar & Isi Ulang</h2>
                 <p class="text-slate-600 mt-2 md:mt-3 text-sm md:text-base">Layanan fleksibel sesuai kebutuhan Anda,
                     dari isi ulang langsung di tempat hingga antar ke alamat.</p>
             </div>
@@ -516,7 +516,7 @@
                     <li><a href="#profil" class="hover:text-white transition">Profil Depot</a></li>
                     <li><a href="#layanan" class="hover:text-white transition">Layanan Galon</a></li>
                     <li><a href="#pemasangan" class="hover:text-white transition">Jasa Pasang Depot</a></li>
-                    <li><a href="#filter-air" class="hover:text-white transition text-emerald-400">Filter Air Rumah
+                    <li><a href="#filter-air" class="hover:text-white transition">Filter Air Rumah
                             Bersih</a></li>
                     <li><a href="#legalitas" class="hover:text-white transition">Legalitas</a></li>
                 </ul>
