@@ -182,7 +182,7 @@
                     <div class="mt-5 pt-4 border-t border-slate-200">
                         <span
                             class="inline-block text-[11px] font-bold text-blue-900 bg-blue-100/80 px-2.5 py-1 rounded-md">
-                            &ldquo;Pilihan Pasti Keluarga, Solusi Sehat Semua Sektor.&rdquo;
+                            &ldquo;Pilihan Pasti Keluarga, Solusi Sehat Semua Sektor, Air Minum Sehat Untuk Investasi Besar Di Tubuh Kita.&rdquo;
                         </span>
                     </div>
                 </div>
