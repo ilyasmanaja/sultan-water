@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuk Sistem POS - Sulthan Air Rebus</title>
+    <!-- Tailwind CSS Via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-100 font-sans antialiased min-h-screen flex items-center justify-center p-4">
+
+    <!-- Card Container -->
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8 sm:p-10 transition-all">
+        
+        <!-- Header / Branding -->
+        <div class="text-center mb-6">
+            <img src="{{ asset('assets/img/logo.png') }}" alt="Logo Sulthan Air Rebus" class="h-20 w-auto mx-auto mb-2 drop-shadow-sm">
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Sultan Water POS</h1>
+            <p class="text-xs text-slate-500 mt-1">Sistem Operasional Depot Sulthan Air Rebus</p>
+        </div>
+
+        <!-- Alert Pesan Error Umum / Session Status -->
+        @if (session('status'))
+            <div class="mb-4 text-xs font-semibold text-green-600 bg-green-50 p-3 rounded-xl border border-green-200">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        <!-- Form Login -->
+        <form action="{{ route('login') }}" method="POST" class="space-y-5">
+            @csrf
+
+            <!-- Input Username -->
+            <div>
+                <label for="username" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Username
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fas fa-user text-sm"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        value="{{ old('username') }}"
+                        required 
+                        autofocus
+                        placeholder="Masukkan username"
+                        class="w-full pl-11 pr-4 py-3 bg-slate-50 border @error('username') border-red-500 @else border-slate-200 @enderror rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
+                    >
+                </div>
+                @error('username')
+                    <p class="text-red-500 text-xs mt-1.5 font-medium">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Input Password dengan Toggle Mata -->
+            <div>
+                <label for="password" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Kata Sandi
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fas fa-lock text-sm"></i>
+                    </span>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        placeholder="••••••••"
+                        class="w-full pl-11 pr-12 py-3 bg-slate-50 border @error('password') border-red-500 @else border-slate-200 @enderror rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
+                    >
+                    <button 
+                        type="button" 
+                        id="togglePassword"
+                        class="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    >
+                        <i class="fas fa-eye text-sm" id="eyeIcon"></i>
+                    </button>
+                </div>
+                @error('password')
+                    <p class="text-red-500 text-xs mt-1.5 font-medium">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Tombol Submit -->
+            <button 
+                type="submit" 
+                class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/20 transition duration-200 flex items-center justify-center gap-2 text-sm mt-2"
+            >
+                <span>Masuk ke Sistem</span>
+                <i class="fas fa-arrow-right text-xs"></i>
+            </button>
+        </form>
+
+        <!-- Footer Card -->
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+            <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-blue-600 transition">
+                <i class="fas fa-arrow-left"></i> Kembali ke Landing Page
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Script Toggle Password -->
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        });
+    </script>
+</body>
+</html>
