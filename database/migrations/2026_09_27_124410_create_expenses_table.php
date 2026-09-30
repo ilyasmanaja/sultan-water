@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
-            $table->enum('category', ['air_baku', 'listrik', 'bensin', 'servis', 'suku_cadang_filter', 'lain_lain']);
+            $table->string('title', 100);
+            $table->enum('category', ['kemasan_produksi', 'operasional_logistik', 'beban_tetap']);
             $table->decimal('amount', 12, 2);
             $table->text('description')->nullable();
             $table->date('expense_date');

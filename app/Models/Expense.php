@@ -13,10 +13,11 @@ class Expense extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'title',
+        'category',
         'amount',
         'description',
         'expense_date',
-        'category',
         'created_by',
     ];
 

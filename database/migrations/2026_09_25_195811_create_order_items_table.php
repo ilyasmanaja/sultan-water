@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('quantity');
             $table->decimal('unit_price', 10, 2);
             $table->decimal('subtotal', 12, 2);
-            $table->enum('gallon_action', ['tukar_seimbang', 'pinjam', 'kembalikan', 'tidak_ada'])->default('tidak_ada');
+            $table->enum('gallon_action', ['tukar_seimbang', 'pinjam', 'kembalikan', 'tidak_ada'])->default('tidak_ada'); // tidak ada = dibeli
             $table->unsignedInteger('gallon_qty')->default(0);
             $table->timestamps();
         });
