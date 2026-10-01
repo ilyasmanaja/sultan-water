@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,9 +13,11 @@ Route::get('/', function () {
     return view('landing-page');
 });
 
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
+// Rute Publik (Guest)
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 // --- ROUTE UNTUK TES UI DASHBOARD (AUTH) ---
 Route::middleware(['auth'])->group(function () {
@@ -23,9 +26,9 @@ Route::middleware(['auth'])->group(function () {
         return view('admin.dashboard');
     })->name('admin.dashboard');
 
-    Route::get('/kasir/dashboard', function () {
-        return view('kasir.dashboard');
-    })->name('kasir.dashboard');
+    Route::get('/pos/dashboard', function () {
+        return view('pos.dashboard');
+    })->name('pos.dashboard');
 
 });
 
@@ -39,6 +42,7 @@ Route::middleware(['auth'])->group(function () {
 // })->name('kasir.dashboard');
 
 
-Route::post('/logout', function () {
-    return redirect()->route('login');
-})->name('logout');
+// Rute Terautentikasi
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
