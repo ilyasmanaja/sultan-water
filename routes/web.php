@@ -20,11 +20,15 @@ Route::middleware('guest')->group(function () {
 });
 
 // --- ROUTE UNTUK TES UI DASHBOARD (AUTH) ---
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/dashboard', function () {
         return view('admin.dashboard');
     })->name('admin.dashboard');
+
+});
+
+Route::middleware(['auth', 'role:kasir'])->group(function () {
 
     Route::get('/pos/dashboard', function () {
         return view('pos.dashboard');
@@ -37,9 +41,9 @@ Route::middleware(['auth'])->group(function () {
 //     return view('admin.dashboard');
 // })->name('admin.dashboard');
 
-// Route::get('/kasir/dashboard', function () {
-//     return view('kasir.dashboard');
-// })->name('kasir.dashboard');
+// Route::get('/pos/dashboard', function () {
+//     return view('pos.dashboard');
+// })->name('pos.dashboard');
 
 
 // Rute Terautentikasi
