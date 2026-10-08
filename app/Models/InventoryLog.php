@@ -7,51 +7,37 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InventoryLog extends Model
 {
-
     public const UPDATED_AT = null; // Disable the updated_at timestamp
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'inventory_id',
         'change_amount',
+        'current_stock', // 👈 WAJIB DITAMBAHKAN
         'reason',
         'order_id',
         'created_by',
     ];
 
-    /**
-     * Get the attibutes that should be cast to native types.
-     */
-    protected $casts = [
-        'change_amount' => 'integer'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'change_amount' => 'integer',
+            'current_stock' => 'integer', // 👈 Cast ke integer
+        ];
+    }
 
-    /**
-     * Get the inventory item associated with the log.
-     */
     public function inventory(): BelongsTo
     {
         return $this->belongsTo(Inventory::class);
     }
 
-    /**
-     * Get the order associated with the log.
-     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
-    /**
-     * Get the user who created the log.
-     */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-    
 }
