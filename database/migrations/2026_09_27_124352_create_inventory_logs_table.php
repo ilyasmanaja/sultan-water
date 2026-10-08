@@ -20,7 +20,6 @@ return new class extends Migration {
                 'restock_stok_jual',
                 'restock_armada_depot',
                 'rollback',     // 👈 2. Ditambahkan
-                'konversi_isi',  // 👈 2. Ditambahkan
             ]);
             $table->foreignId('order_id')->nullable()->constrained('orders');
             $table->foreignId('created_by')->constrained('users');
