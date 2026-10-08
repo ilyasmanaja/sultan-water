@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -15,7 +14,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('inventory_id')->constrained('inventories');
             $table->integer('change_amount');
-            $table->enum('reason', ['transaksi', 'restock_stok_jual', 'restock_armada_depot']);
+            $table->integer('current_stock')->default(0); // 👈 1. Ditambahkan
+            $table->enum('reason', [
+                'transaksi',
+                'restock_stok_jual',
+                'restock_armada_depot',
+                'rollback',     // 👈 2. Ditambahkan
+                'konversi_isi',  // 👈 2. Ditambahkan
+            ]);
             $table->foreignId('order_id')->nullable()->constrained('orders');
             $table->foreignId('created_by')->constrained('users');
             $table->timestamp('created_at')->nullable();
