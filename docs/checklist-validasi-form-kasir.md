@@ -2,9 +2,9 @@
 
 **Dokumen ID:** DOC-VAL-POS-02  
 **Ref Issue:** `[S2-PM-02] Menyusun Checklist Validasi Form Kasir #19`  
-**Dependencies:** `Data Skema Tabel Database.md` v1.1 (`S1-PM-02`), `BR-INV-01` v1.1, `BR-INV-02`  
+**Dependencies:** `Data Skema Tabel Database.md` v1.3 (`S1-PM-02`), `BR-INV-01` v1.1, `BR-INV-02` v2.1  
 **Author:** Raihan (Product Owner / System Analyst)  
-**Versi:** 1.1 (6 Oktober 2026) — lihat Bagian 5 untuk catatan revisi  
+**Versi:** 1.3 (9 Oktober 2026) — lihat Bagian 5 untuk catatan revisi  
 **Target Pembaca:** 
 
 - Naufal (Backend Developer — acuan Laravel `StoreOrderRequest` & Service)
@@ -20,7 +20,7 @@ Input form kasir akan memetakan payload request ke tabel-tabel berikut:
 - **`orders`**: header pesanan (`customer_id`, `order_type`, `delivery_status`, `payment_method`, `payment_status`, `total_amount`, `created_by`).
 - **`order_items`**: detail item (`order_id`, `product_id`, `price_tier_id`, `quantity`, `unit_price`, `subtotal`, `gallon_action`, `gallon_qty`).
 - **`customers`**: pembuatan pelanggan baru (Quick Add) atau pembaruan saldo `borrowed_gallons` ($G_p$).
-- **`inventories` & `inventory_logs`**: pemotongan stok tutup galon (`item_type = 'tutup_galon'`) dan mutasi stok galon fisik (`galon_siap_jual`, `galon_kosong_depot`) sesuai `BR-INV-02`.
+- **`inventories` & `inventory_logs`**: pemotongan stok tutup galon (`item_type = 'tutup_galon'`) pada semua transaksi, dan pengurangan Total Galon Dimiliki (G_total, baris penampung `galon_kosong_depot`) khusus penjualan galon baru. Saldo galon pinjaman dikelola lewat `customers.borrowed_gallons` sesuai `BR-INV-02` v2.1.
 
 ---
 
@@ -38,23 +38,22 @@ Aturan ditulis dalam notasi array Laravel.
 | `new_customer.whatsapp_number` | `customers.whatsapp_number` | Kondisional | VARCHAR(20)            | Wajib jika Quick Add. Format numerik valid telepon Indonesia (`regex:/^(08\|628)[0-9]{8,13}$/`).                                                                                                               | "Nomor WhatsApp tidak valid (minimal 10-15 digit angka)."                         |
 | `new_customer.address`         | `customers.address`         | Kondisional | TEXT                   | Wajib jika Quick Add dan `order_type == 'pesan_antar'`. Minimal 5 karakter.                                                                                                                                    | "Alamat pengantaran wajib diisi untuk layanan pesan antar."                       |
 | `payment_method`               | `orders.payment_method`     | Wajib       | ENUM                   | `['required', 'in:tunai,qris']`                                                                                                                                                                                | "Metode pembayaran wajib dipilih (tunai / QRIS)."                                 |
-| `cash_received`                | *(Form Helper)*             | Kondisional | DECIMAL / INT          | Wajib jika `payment_method == 'tunai'`. Nilai harus ≥ `total_amount`.                                                                                                                                          | "Uang tunai yang diterima kurang dari total tagihan."                             |
+| `cash_received`                | *(Form Helper)*             | Kondisional | DECIMAL / INT          | Wajib jika `payment_method == 'tunai'`. Nilai harus $\ge \text{total\_amount}$.                                                                                                                                | "Uang tunai yang diterima kurang dari total tagihan."                             |
 | `items`                        | *(Array item)*              | Wajib       | Array                  | `['required', 'array', 'min:1']`                                                                                                                                                                               | "Minimal satu item transaksi harus diisi."                                        |
 | `items.*.product_id`           | `order_items.product_id`    | Wajib       | BIGINT UNSIGNED        | `['required', 'exists:products,id']`                                                                                                                                                                           | "Produk tidak valid."                                                             |
-| `items.*.price_tier_id`        | `order_items.price_tier_id` | Wajib       | BIGINT UNSIGNED        | `['required', 'exists:price_tiers,id']`. Tier harus `is_active = TRUE` dan cocok dengan tipe produk (`applies_to`) — lihat Bagian 3.D.                                                                         | "Tier harga tidak valid atau tidak sesuai jenis produk."                          |
+| `items.*.price_tier_id`        | `order_items.price_tier_id` | Wajib       | BIGINT UNSIGNED        | `['required', 'exists:price_tiers,id']`. Tier harus `is_active = TRUE` dan cocok dengan tipe produk (`applies_to`) — lihat Bagian 3.C.                                                                         | "Tier harga tidak valid atau tidak sesuai jenis produk."                          |
 | `items.*.quantity`             | `order_items.quantity`      | Wajib       | INT UNSIGNED           | `['required', 'integer', 'min:1']`. *(Retur galon murni dengan `quantity = 0` baru didukung di Sprint 3.)*                                                                                                     | "Jumlah item minimal 1."                                                          |
-| `items.*.gallon_action`        | `order_items.gallon_action` | Wajib       | ENUM                   | `['required', 'in:tukar_seimbang,pinjam,kembalikan,tidak_ada']`. Produk bertipe `galon_baru` hanya boleh `tidak_ada` — lihat Bagian 3.D.                                                                       | "Opsi galon fisik tidak valid."                                                   |
+| `items.*.gallon_action`        | `order_items.gallon_action` | Wajib       | ENUM                   | `['required', 'in:tukar_seimbang,pinjam,kembalikan,tidak_ada']`. Produk bertipe `galon_baru` hanya boleh `tidak_ada` — lihat Bagian 3.C.                                                                       | "Opsi galon fisik tidak valid."                                                   |
 | `items.*.gallon_qty`           | `order_items.gallon_qty`    | Kondisional | INT UNSIGNED           | - `pinjam` atau `kembalikan`: `['required', 'integer', 'min:1']`.<br>- `tukar_seimbang`: **diisi server** sama dengan `quantity`; nilai kiriman klien diabaikan.<br>- `tidak_ada`: harus 0 atau tidak dikirim. | "Jumlah galon yang dipinjam/dikembalikan minimal 1."                              |
 
 ### B. Form Inventaris
 
 Nama field di bawah adalah **usulan** dan boleh disesuaikan Naufal saat implementasi `S2-BE-05`.
 
-| Form / Endpoint                         | Field (usulan) | Status | Aturan Validasi                                                                                                                                                                                 | Hak Akses         | Pesan Error                                                                                                                                         |
-|:--------------------------------------- |:-------------- |:------ |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Restock (`restockCap`, `restockGallon`) | `quantity`     | Wajib  | `['required', 'integer', 'min:1']`                                                                                                                                                              | **Admin saja**    | "Jumlah restock harus bilangan bulat minimal 1."                                                                                                    |
-| Restock (`restockGallon`)               | `allocation`   | Wajib  | `['required', 'in:stok_dijual,armada_depot']`. Hanya menentukan `reason` log (`restock_stok_jual` / `restock_armada_depot`); stok galon selalu masuk ke `galon_kosong_depot` (`BR-INV-02` 6.A). | **Admin saja**    | "Alokasi restock wajib dipilih (Stok Dijual / Armada Depot)."                                                                                       |
-| Isi Galon Kosong (`fillEmptyGallons`)   | `quantity`     | Wajib  | `['required', 'integer', 'min:1']` dan tidak boleh melebihi stok `galon_kosong_depot`.                                                                                                          | **Kasir & Admin** | "Jumlah galon yang diisi harus bilangan bulat minimal 1." / "Jumlah galon yang diisi (:qty) melebihi stok galon kosong di depot (Tersisa: :stock)." |
+| Form / Endpoint                         | Field (usulan) | Status | Aturan Validasi                                                                                                                                                                                                       | Hak Akses      | Pesan Error                                                   |
+|:--------------------------------------- |:-------------- |:------ |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------- |:------------------------------------------------------------- |
+| Restock (`restockCap`, `restockGallon`) | `quantity`     | Wajib  | `['required', 'integer', 'min:1']`                                                                                                                                                                                    | **Admin saja** | "Jumlah restock harus bilangan bulat minimal 1."              |
+| Restock (`restockGallon`)               | `allocation`   | Wajib  | `['required', 'in:stok_dijual,armada_depot']`. Hanya menentukan `reason` log (`restock_stok_jual` / `restock_armada_depot`); jumlah restock menambah Total Galon Dimiliki (`BR-INV-02` §6.B).                          | **Admin saja** | "Alokasi restock wajib dipilih (Stok Dijual / Armada Depot)." |
 
 ---
 
@@ -77,12 +76,14 @@ Nama field di bawah adalah **usulan** dan boleh disesuaikan Naufal saat implemen
      
      > *"Jumlah pengembalian (:qty) melebihi galon yang sedang dipinjam pelanggan (:borrowed unit)."*
 
-3. Transaksi `tukar_seimbang` (1:1) boleh memakai Pelanggan Umum tanpa identitas.
+3. Transaksi `tukar_seimbang` (1:1) boleh memakai Pelanggan Umum tanpa identitas dan tidak mengubah $G_p$.
 
 ### B. Validasi Ketersediaan Stok Tutup Galon
 
+Validasi stok inventaris sebelum checkout transaksi **murni memeriksa ketersediaan `tutup_galon`**. Tidak ada validasi stok galon fisik lain, termasuk G_total.
+
 - Hitung total galon yang membutuhkan penutupan baru (item isi ulang dan galon baru):
-  
+
   $$
   Q_g = \sum \text{items.quantity}
   $$
@@ -93,39 +94,25 @@ Nama field di bawah adalah **usulan** dan boleh disesuaikan Naufal saat implemen
   
   > *"Stok tutup galon tidak mencukupi (Tersisa: :stock, Dibutuhkan: :qty). Silakan lakukan restock terlebih dahulu."*
 
-### C. Validasi Ketersediaan Stok Galon Siap Jual
+- Pengecekan ini dilakukan sebelum ada data yang ditulis; jika gagal, tidak ada order, mutasi (termasuk G_total), maupun log yang tersimpan.
 
-- Hitung kebutuhan galon siap jual dari galon baru, `tukar_seimbang`, dan `pinjam` (rumus lengkap di `BR-INV-02`):
-  
-  $$
-  \text{Kebutuhan} = Q_{baru} + g_{tukar} + g_{pinjam}
-  $$
+**Pengurangan G_total pada galon baru (bukan validasi):** transaksi dengan produk `galon_baru` mengurangi `tutup_galon` sebesar `Q_baru` dan G_total sebesar `Q_baru`, dicatat 2 baris log (`reason = 'transaksi'`). G_total **tidak** menjadi syarat transaksi: tidak ada 422 berdasarkan G_total. Jika G_total tidak mencukupi atau minus, transaksi tetap diproses dan admin mendapat penanda (`BR-INV-02` §5 dan §6.A).
 
-- Sistem membaca stok `quantity` pada baris `inventories` dengan `item_type = 'galon_siap_jual'`.
-
-- Jika kebutuhan melebihi stok, batalkan transaksi (Rollback) dan kirim response error 422:
-  
-  > *"Stok galon siap jual tidak mencukupi (Tersisa: :stock, Dibutuhkan: :qty)."*
-
-- `kembalikan` tidak memerlukan pengecekan stok ini.
-
-- Pengecekan B dan C dilakukan sebelum ada data yang ditulis; jika salah satunya gagal, tidak ada order, mutasi, maupun log yang tersimpan.
-
-### D. Konsistensi Tier Harga & Opsi Galon terhadap Tipe Produk
+### C. Konsistensi Tier Harga & Opsi Galon terhadap Tipe Produk
 
 - Jika produk bertipe `isi_ulang`: `price_tier_id` harus memiliki `applies_to = 'isi_ulang'` (pilihan code: `sosial`, `letak_kedai`, `antar_dekat`, `antar_jauh`).
 - Jika produk bertipe `galon_baru`: `price_tier_id` harus memiliki `applies_to = 'galon_baru'` (code: `galon_baru_isi`), dan `gallon_action` harus `tidak_ada`. Pesan error: *"Galon baru tidak dapat memakai opsi tukar, pinjam, atau kembalikan."*
 - Tier dengan `is_active = FALSE` ditolak.
 
-### E. Status Pesanan
+### D. Status Pesanan
 
 - Transaksi `ambil_sendiri` (walk-in) disimpan dengan `delivery_status = 'selesai'` dan tidak masuk antrean pengantaran.
 - Transaksi `pesan_antar` disimpan dengan `delivery_status = 'pending'` (alur lanjutan di Sprint 3).
 
-### F. Di Luar Cakupan Sprint 2 (Dicatat untuk Sprint 3)
+### E. Di Luar Cakupan Sprint 2 (Dicatat untuk Sprint 3)
 
 - Retur galon pinjaman murni (tanpa isi ulang): `quantity = 0`, `price_tier_id` NULL, memerlukan migrasi `price_tier_id` nullable dan perubahan aturan `items.*.quantity` serta `price_tier_id` di atas.
-- Pembatalan order (`batal`) dan rollback stok serta saldo pinjaman.
+- Pembatalan order (`batal`) dan rollback stok tutup serta saldo pinjaman.
 
 ---
 
@@ -141,28 +128,51 @@ Nama field di bawah adalah **usulan** dan boleh disesuaikan Naufal saat implemen
 | **TC-VAL-06** | Pembayaran QRIS (Valid)                           | `total_amount: 14000`, `payment_method: qris`.                                                              | Status 201 Created. `payment_status = 'lunas'`, tidak memvalidasi `cash_received`.                                           | [ ]    |
 | **TC-VAL-07** | Ketidaksesuaian Tier Harga (Invalid)              | Item produk `Air Isi Ulang` dipasangkan dengan `price_tier_id` untuk `galon_baru_isi`.                      | Validasi gagal (422). Tier harga tidak sesuai jenis produk.                                                                  | [ ]    |
 | **TC-VAL-08** | Pesanan Melebihi Stok Tutup Galon (Invalid)       | Sisa stok tutup galon = 3 unit. Input pesanan: kuantitas 4 galon.                                           | Validasi gagal (422). "Stok tutup galon tidak mencukupi (Tersisa: 3, Dibutuhkan: 4)...". Transaksi dibatalkan, stok tetap 3. | [ ]    |
-| **TC-VAL-09** | Pesanan Melebihi Stok Galon Siap Jual (Invalid)   | Stok `galon_siap_jual` = 1, tutup mencukupi. Input pesanan galon baru, kuantitas 2.                         | Validasi gagal (422). "Stok galon siap jual tidak mencukupi (Tersisa: 1, Dibutuhkan: 2)." Tidak ada order dan log tersimpan. | [ ]    |
-| **TC-VAL-10** | Tier Harga Nonaktif (Invalid)                     | `price_tier_id` dengan `is_active = FALSE`, sesuai tipe produk.                                             | Validasi gagal (422). Tier harga tidak valid.                                                                                | [ ]    |
-| **TC-VAL-11** | Pengembalian Galon Tanpa Pelanggan (Invalid)      | `customer_id: null`, `gallon_action: kembalikan`, `gallon_qty: 1`.                                          | Validasi gagal (422). Pelanggan wajib dipilih jika mengembalikan galon.                                                      | [ ]    |
-| **TC-VAL-12** | Kuantitas Item Tidak Valid (Invalid)              | `items.*.quantity`: `0`, `-1`, dan `1.5`.                                                                   | Validasi gagal (422). "Jumlah item minimal 1." untuk ketiganya.                                                              | [ ]    |
-| **TC-VAL-13** | Status Pesanan Walk-in (Valid)                    | Transaksi `ambil_sendiri` yang valid.                                                                       | Status 201 Created. `orders.delivery_status = 'selesai'`.                                                                    | [ ]    |
-| **TC-VAL-14** | Galon Baru dengan Opsi Galon Fisik Lain (Invalid) | Produk `galon_baru` dengan `gallon_action: pinjam`.                                                         | Validasi gagal (422). "Galon baru tidak dapat memakai opsi tukar, pinjam, atau kembalikan."                                  | [ ]    |
-| **TC-VAL-15** | Nomor WhatsApp Quick Add Tidak Valid (Invalid)    | `new_customer.whatsapp_number: '12345'`.                                                                    | Validasi gagal (422). Nomor WhatsApp tidak valid.                                                                            | [ ]    |
-| **TC-VAL-16** | Transaksi Tanpa Item (Invalid)                    | `items: []`.                                                                                                | Validasi gagal (422). "Minimal satu item transaksi harus diisi."                                                             | [ ]    |
+| **TC-VAL-09** | Tier Harga Nonaktif (Invalid)                     | `price_tier_id` dengan `is_active = FALSE`, sesuai tipe produk.                                             | Validasi gagal (422). Tier harga tidak valid.                                                                                | [ ]    |
+| **TC-VAL-10** | Pengembalian Galon Tanpa Pelanggan (Invalid)      | `customer_id: null`, `gallon_action: kembalikan`, `gallon_qty: 1`.                                          | Validasi gagal (422). Pelanggan wajib dipilih jika mengembalikan galon.                                                      | [ ]    |
+| **TC-VAL-11** | Kuantitas Item Tidak Valid (Invalid)              | `items.*.quantity`: `0`, `-1`, dan `1.5`.                                                                   | Validasi gagal (422). "Jumlah item minimal 1." untuk ketiganya.                                                              | [ ]    |
+| **TC-VAL-12** | Status Pesanan Walk-in (Valid)                    | Transaksi `ambil_sendiri` yang valid.                                                                       | Status 201 Created. `orders.delivery_status = 'selesai'`.                                                                    | [ ]    |
+| **TC-VAL-13** | Galon Baru dengan Opsi Galon Fisik Lain (Invalid) | Produk `galon_baru` dengan `gallon_action: pinjam`.                                                         | Validasi gagal (422). "Galon baru tidak dapat memakai opsi tukar, pinjam, atau kembalikan."                                  | [ ]    |
+| **TC-VAL-14** | Nomor WhatsApp Quick Add Tidak Valid (Invalid)    | `new_customer.whatsapp_number: '12345'`.                                                                    | Validasi gagal (422). Nomor WhatsApp tidak valid.                                                                            | [ ]    |
+| **TC-VAL-15** | Transaksi Tanpa Item (Invalid)                    | `items: []`.                                                                                                | Validasi gagal (422). "Minimal satu item transaksi harus diisi."                                                             | [ ]    |
+| **TC-VAL-16** | Galon Baru Saat G_total Tidak Cukup (Valid)       | G_total = 1, tutup 1000. Input item `galon_baru`, kuantitas 2, `gallon_action: tidak_ada`.                  | Status 201 Created (tidak ditolak). Tutup 998, G_total = -1, penanda untuk admin. 2 baris log `reason = 'transaksi'`.        | [ ]    |
 
-*Skenario uji mutasi stok galon fisik dan konversi galon kosong ada di `BR-INV-02` (TC-GAL-01 s.d. TC-GAL-16).*
+*Skenario uji saldo pinjaman galon, pemantauan armada, dan restock galon fisik ada di `BR-INV-02` (TC-GAL-01 s.d. TC-GAL-21).*
 
 ---
 
-## 5. Catatan Revisi (v1.1 — 6 Oktober 2026)
+## 5. Catatan Revisi
+
+### v1.3 — 9 Oktober 2026
+
+Penyelarasan dengan keputusan penjualan galon baru mengurangi G_total otomatis (`BR-INV-02` v2.1).
+
+| Bagian | Perubahan                                                                                                                      | Alasan                                                                                             |
+|:------ |:------------------------------------------------------------------------------------------------------------------------------ |:-------------------------------------------------------------------------------------------------- |
+| 1      | Pemetaan `inventories` mencakup tutup (semua transaksi) dan baris penampung G_total (khusus galon baru).                      | Galon baru adalah beli putus sehingga mengurangi aset armada.                                      |
+| 3.B    | Ditambahkan aturan pengurangan G_total pada galon baru (2 baris log) dan penegasan bahwa G_total bukan syarat transaksi/422.   | Validasi pemblokir 422 murni untuk ketersediaan `tutup_galon`; G_total hanya memberi penanda admin. |
+| 4      | TC-VAL-16 ditambahkan (galon baru saat G_total tidak cukup tetap 201). Rujukan `BR-INV-02` menjadi TC-GAL-01 s.d. TC-GAL-21.  | Cakupan uji keputusan baru.                                                                        |
+
+### v1.2 — 9 Oktober 2026
+
+Penyesuaian dengan penyederhanaan ruang lingkup inventaris (pelacakan galon fisik internal depot dihapus; lihat `BR-INV-02` v2.0 Bagian 8).
+
+| Bagian | Perubahan                                                                                                                                              | Alasan                                                                                                       |
+|:------ |:------------------------------------------------------------------------------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------ |
+| 1      | Pemetaan `inventories` dan `inventory_logs` hanya mencakup `tutup_galon`.                                                                              | Transaksi tidak lagi memutasi baris inventaris galon fisik.                                                  |
+| 2.B    | Baris form pengisian galon dihapus. Keterangan `allocation` pada restock galon disesuaikan.                                                            | Fitur dihapus; kasir sering lupa mencatat pengisian sehingga rawan false 422 saat transaksi.                 |
+| 3.B    | Ditegaskan bahwa validasi stok inventaris sebelum checkout murni memeriksa `tutup_galon`.                                                              | Hanya tutup galon yang menjadi syarat transaksi.                                                             |
+| 3.C    | Bagian validasi stok galon siap jual dihapus. Bagian 3.D–3.F lama menjadi 3.C–3.E; rujukan silang di Bagian 2.A diperbarui.                            | Validasi tidak lagi ada; penomoran dirapikan.                                                                |
+| 4      | TC-VAL-09 (stok galon siap jual tidak cukup) dihapus; TC-VAL-10 s.d. TC-VAL-16 lama menjadi TC-VAL-09 s.d. TC-VAL-15. Rujukan test case `BR-INV-02` diperbarui. | Skenario tidak lagi relevan; nomor dirapikan.                                                                |
+
+### v1.1 — 6 Oktober 2026
 
 | Bagian | Perubahan                                                                                                                                        | Alasan                                                                                                                                                            |
 |:------ |:------------------------------------------------------------------------------------------------------------------------------------------------ |:----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2.A    | Tabel matriks ditulis ulang dengan notasi array Laravel.                                                                                         | Karakter `\|` pada rule (`required\|in:...`) memecah kolom tabel di Markdown, sehingga beberapa sel `Aturan` dan `Pesan Error` terpotong atau tertukar pada v1.0. |
 | 2.A    | Isi sel yang terpotong direkonstruksi: aturan `items`, `quantity`, `gallon_action`, `gallon_qty`, `payment_method`, dan pesan error yang hilang. | Perlu **dicek ulang oleh pembuat dokumen** terhadap maksud awal.                                                                                                  |
 | 2.A    | `customer_id` wajib juga untuk `kembalikan`; `gallon_qty` pada `tukar_seimbang` diisi server.                                                    | Menyamakan dengan Bagian 3.A dan `BR-INV-02`.                                                                                                                     |
-| 2.B    | Form inventaris (restock dan Isi Galon Kosong) beserta hak akses ditambahkan.                                                                    | Tiket `S2-BE-05` dan `S2-FE-05`.                                                                                                                                  |
+| 2.B    | Form restock beserta hak akses ditambahkan.                                                                                                      | Tiket `S2-BE-05`.                                                                                                                                                 |
 | 3.B    | Pesan error stok tutup disamakan: "Tersisa" (bukan "Tersedia") dan kalimat restock ditambahkan.                                                  | Menyamakan dengan `BR-INV-01` §4.4.                                                                                                                               |
-| 3.C    | Validasi stok galon siap jual ditambahkan.                                                                                                       | Keputusan: galon baru dan opsi galon fisik memengaruhi `galon_siap_jual` (`BR-INV-02`).                                                                           |
-| 3.D–F  | Aturan galon baru → `tidak_ada`, status walk-in `selesai`, dan daftar yang ditunda ke Sprint 3.                                                  | Kelengkapan aturan Sprint 2.                                                                                                                                      |
-| 4      | Marker `[cite: N]` dihapus dari teks; TC-VAL-08 diperbarui; TC-VAL-09 s.d. TC-VAL-16 ditambahkan.                                                | Kebersihan dokumen dan cakupan uji.                                                                                                                               |
+| 3.C–E  | Aturan galon baru → `tidak_ada`, status walk-in `selesai`, dan daftar yang ditunda ke Sprint 3. *(Bagian 3.D–F pada v1.1.)*                      | Kelengkapan aturan Sprint 2.                                                                                                                                      |
+| 4      | Marker `[cite: N]` dihapus dari teks; TC-VAL-08 diperbarui; test case tambahan ditambahkan.                                                      | Kebersihan dokumen dan cakupan uji.                                                                                                                               |

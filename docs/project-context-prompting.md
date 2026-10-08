@@ -1,6 +1,6 @@
 # PROJECT CONTEXT: Sultan Water — Sistem POS Depot Air Minum Isi Ulang
 
-**Versi 1.1 — 6 Oktober 2026.** Status proyek: Sprint 1 selesai, Sprint 2 sedang berjalan. Dokumen acuan terkait: `data-skema-Tabel-database.md` (v1.1), `business-rule-tutup-galon.md` (BR-INV-01 v1.1), `business-rule-galon-fisik.md` (BR-INV-02), `checklist-validasi-form-kasir.md` (DOC-VAL-POS-02 v1.1).
+**Versi 1.3 — 9 Oktober 2026.** Status proyek: Sprint 1 selesai, Sprint 2 sedang berjalan. Dokumen acuan terkait: `data-skema-Tabel-database.md` (v1.3), `business-rule-tutup-galon.md` (BR-INV-01 v1.1), `business-rule-galon-fisik.md` (BR-INV-02 v2.1), `checklist-validasi-form-kasir.md` (DOC-VAL-POS-02 v1.3).
 
 > Dokumen ini adalah ringkasan konteks lengkap proyek, ditulis supaya bisa langsung ditempel ke percakapan AI mana pun (Claude, ChatGPT, dll) sebagai konteks awal — misalnya saat minta bantuan merancang struktur database, menulis kode, atau melanjutkan development. Semua bagian di bawah sudah final/disepakati per revisi terakhir, kecuali disebutkan sebagai "belum diputuskan".
 
@@ -14,9 +14,10 @@
 
 1. Mengotomatisasi pengurangan stok tutup galon secara real-time setiap transaksi.
 2. Memantau kuantitas fisik galon depot yang sedang dipinjam pelanggan (fasilitas pinjam gratis, **murni pencatatan unit fisik, bukan saldo finansial**).
-3. Memberi peringatan dini (low-stock alert) saat stok tutup galon menipis.
-4. Mencatat biaya operasional (termasuk biaya penggantian filter) dan menghasilkan laporan laba bersih harian/bulanan.
-5. Menyediakan etalase publik ringkas dengan pemesanan antar terintegrasi WhatsApp (`wa.me`).
+3. Memantau makro aset armada galon depot (Total Galon Dimiliki, Galon Dipinjam, Galon Standby di Depot) sebagai bahan pertimbangan membeli galon baru saat pelanggan bertambah.
+4. Memberi peringatan dini (low-stock alert) saat stok tutup galon menipis.
+5. Mencatat biaya operasional (termasuk biaya penggantian filter) dan menghasilkan laporan laba bersih harian/bulanan.
+6. Menyediakan etalase publik ringkas dengan pemesanan antar terintegrasi WhatsApp (`wa.me`).
 
 ---
 
@@ -39,8 +40,8 @@
 Sistem punya 3 kelas pengguna:
 
 1. **Publik/Konsumen** — tanpa login. Lihat profil depot, harga, sertifikat kelayakan air, dan pesan antar via tombol WhatsApp otomatis.
-2. **Kasir/Operator Depot** — login. Input transaksi POS (walk-in & pesan antar), pilih metode pembayaran, update status pengantaran (Pending → Diantar → Selesai), catat keluar-masuk galon pinjaman, dan mencatat galon kosong yang sudah diisi menjadi siap jual ("Isi Galon Kosong"). Peran ini juga dipakai oleh pekerja lapangan/kurir — **hanya 1 role "kasir" yang menangani semua tipe pengiriman (dekat & jauh), tidak dipecah jadi role terpisah** (sempat direncanakan dipecah 2 role untuk kurir, tapi dibatalkan — lihat bagian Riwayat Revisi).
-3. **Pemilik/Administrator Depot** — login. Kelola katalog produk & harga, kontrol stok (termasuk restock tutup galon & pembelian galon baru — **hanya admin**), kelola direktori pelanggan, catat pengeluaran operasional, lihat laporan laba bersih.
+2. **Kasir/Operator Depot** — login. Input transaksi POS (walk-in & pesan antar), pilih metode pembayaran, update status pengantaran (Pending → Diantar → Selesai), dan catat keluar-masuk galon pinjaman. Peran ini juga dipakai oleh pekerja lapangan/kurir — **hanya 1 role "kasir" yang menangani semua tipe pengiriman (dekat & jauh), tidak dipecah jadi role terpisah** (sempat direncanakan dipecah 2 role untuk kurir, tapi dibatalkan — lihat bagian Riwayat Revisi).
+3. **Pemilik/Administrator Depot** — login. Kelola katalog produk & harga, kontrol stok (termasuk restock tutup galon & pembelian galon baru — **hanya admin**), pantau aset armada galon, kelola direktori pelanggan, catat pengeluaran operasional, lihat laporan laba bersih.
 
 Login pakai username/password standar Laravel Auth, role dibedakan lewat middleware (`admin`, `kasir`).
 
@@ -73,10 +74,10 @@ Login pakai username/password standar Laravel Auth, role dibedakan lewat middlew
 ### D. Modul Inventaris
 
 - Pemotongan otomatis stok tutup galon per transaksi (1 galon = −1 tutup).
-- Mutasi otomatis stok galon fisik per transaksi (galon baru, Tukar Seimbang, Pinjam, Kembalikan) — lihat Bagian 7 dan `BR-INV-02`.
-- **Isi Galon Kosong** (bisa dilakukan kasir & admin): kasir mencatat jumlah galon kosong depot yang baru selesai diisi, sehingga berpindah ke stok Siap Jual.
-- Restock tutup galon & pembelian galon baru dari distributor (hanya admin). Pembelian galon baru **selalu masuk ke Kosong di Depot**; pilihan alokasi **Stok Dijual** (etalase) vs **Armada Depot** (aset pinjaman gratis) hanya menjadi alasan di log audit. Galon baru bisa dijual setelah diisi lewat "Isi Galon Kosong".
-- Pemantauan stok galon fisik: Siap Jual, Kosong di Depot, Dipinjam (akumulasi dari seluruh pelanggan).
+- Penjualan galon baru (beli putus) juga **otomatis mengurangi Total Galon Dimiliki** sebesar jumlah galon baru, dicatat 2 baris log audit. Total Galon Dimiliki tidak menjadi syarat transaksi (tidak memicu 422); nilai minus hanya memberi penanda untuk admin.
+- Pembaruan otomatis saldo galon pinjaman pelanggan (`Gp`) per transaksi (Pinjam, Kembalikan) — lihat Bagian 7 dan `BR-INV-02`. Sistem **tidak** melacak perpindahan galon di dalam depot (pengisian dan penyimpanan galon).
+- Restock tutup galon & pembelian galon baru dari distributor (**hanya admin**). Pembelian galon baru menambah Total Galon Dimiliki; pilihan alokasi **Stok Dijual** vs **Armada Depot** hanya menjadi alasan di log audit.
+- **Pemantauan makro aset armada galon** (admin): Total Galon Dimiliki, Galon Dipinjam (akumulasi `Gp` seluruh pelanggan), dan Galon Standby di Depot (Total − Dipinjam). Murni tampilan pemantauan untuk pertimbangan membeli galon baru; tidak memengaruhi validasi transaksi. **Dijadwalkan Sprint 4**, digabung dengan Dashboard Pemilik (`S4-FE-02`).
 - **Low-stock alert**: peringatan visual saat stok tutup galon mencapai/di bawah ambang batas minimum **600 unit** (dapat dikonfigurasi admin, bukan hardcode).
 
 ### E. Modul Pelanggan & Pinjaman Galon
@@ -150,14 +151,15 @@ Struktur Sprint 1 sudah dibuat sebagai migrasi (9 tabel bisnis) dan **sesuai** d
 
 ### `inventories`
 
-- 3 baris tetap (`item_type` unik): `tutup_galon`, `galon_siap_jual`, `galon_kosong_depot`, masing-masing dengan `quantity`
+- 3 baris tetap (`item_type` unik) hasil migrasi Sprint 1 yang **tidak diubah**, masing-masing dengan `quantity`. **Transaksi memutasi baris `tutup_galon` (semua transaksi) dan baris penampung Total Galon Dimiliki (khusus penjualan galon baru).**
+- Satu baris dipakai sebagai penampung angka Total Galon Dimiliki (bertambah lewat restock galon oleh admin, berkurang otomatis pada penjualan galon baru); satu baris lainnya tidak dipakai. Rincian ada di `data-skema-Tabel-database.md` Bagian 7.
 - `low_stock_threshold` (default 600, dapat diubah admin; relevan untuk `tutup_galon`)
 - Galon dipinjam **tidak** disimpan di sini, tetapi dihitung dari `SUM(customers.borrowed_gallons)`
 
 ### `inventory_logs`
 
 - Jejak audit setiap perubahan stok: `inventory_id`, `change_amount` (bertanda), `reason`, `order_id` (nullable), `created_by`, `created_at`
-- `reason`: `transaksi`, `restock_stok_jual`, `restock_armada_depot`, 🆕 `rollback`, 🆕 `konversi_isi`
+- `reason`: `transaksi`, `restock_stok_jual`, `restock_armada_depot`, 🆕 `rollback` (dipakai mulai Sprint 3)
 - 🆕 `current_stock`: saldo setelah mutasi (snapshot audit)
 
 ### `expenses`
@@ -188,24 +190,18 @@ Gp = Gp_sebelumnya + galon_baru_dipinjam - galon_dikembalikan
 
 (Nilai Gp adalah kuantitas unit fisik, bukan saldo uang.)
 
-**Mutasi stok galon fisik per transaksi** (rincian dan pengecualian di `BR-INV-02`; berlaku untuk walk-in di Sprint 2):
+**Pemantauan makro aset armada galon** (tampilan admin; rincian di `BR-INV-02`):
 
 ```
-Siap Jual   = Siap Jual   - galon_baru - galon_tukar_seimbang - galon_pinjam
-Kosong Depot = Kosong Depot + galon_tukar_seimbang + galon_dikembalikan
-Gp          = Gp + galon_pinjam - galon_dikembalikan
+Galon Dipinjam (Gp total)  = SUM(customers.borrowed_gallons)
+Galon Standby di Depot     = Total Galon Dimiliki - Galon Dipinjam (Gp total)
 ```
 
-**Konversi galon kosong menjadi siap jual** (kasir mencatat jumlah galon yang baru selesai diisi, N):
+**Penjualan galon baru** (beli putus, Q_baru unit): `Total Galon Dimiliki = Total Galon Dimiliki - Q_baru` dan `Stok Akhir Tutup` berkurang sebesar Q_baru; dicatat 2 baris `inventory_logs` (`reason = 'transaksi'`).
 
-```
-Kosong Depot = Kosong Depot - N
-Siap Jual    = Siap Jual + N        (syarat: 1 <= N <= Kosong Depot)
-```
+**Restock galon dari distributor** (R unit): `Total Galon Dimiliki = Total Galon Dimiliki + R`. Alokasi Stok Dijual / Armada Depot hanya menentukan `reason` log (`restock_stok_jual` / `restock_armada_depot`).
 
-**Restock galon fisik dari distributor** (R unit): `Kosong Depot = Kosong Depot + R`; Siap Jual tidak berubah. Alokasi Stok Dijual / Armada Depot hanya menentukan `reason` log (`restock_stok_jual` / `restock_armada_depot`).
-
-**Validasi stok:** transaksi ditolak (422, tanpa data tersimpan) jika stok tutup < Qg, atau stok Siap Jual < galon_baru + galon_tukar_seimbang + galon_pinjam. Semua mutasi dan log dilakukan dalam satu `DB::transaction()` dengan `lockForUpdate()`. Setiap mutasi dicatat di `inventory_logs` dengan saldo setelah mutasi.
+**Validasi stok:** transaksi ditolak (422, tanpa data tersimpan) jika stok tutup < Qg. Tidak ada validasi stok galon fisik lain: Total Galon Dimiliki tidak pernah menolak transaksi. Mutasi tutup, pengurangan Total Galon Dimiliki, pembaruan Gp, dan log dilakukan dalam satu `DB::transaction()` dengan `lockForUpdate()`. Setiap mutasi tutup dicatat di `inventory_logs` dengan saldo setelah mutasi.
 
 **Validasi wajib identitas pinjam dan kembalikan galon:** Jika transaksi melibatkan `galon_baru_dipinjam > 0` atau pengembalian galon pinjaman, sistem **wajib** minta nama & no. WhatsApp pelanggan, dan **menolak** transaksi jika masih berstatus default "Pelanggan Umum". Pengembalian juga ditolak jika melebihi Gp pelanggan. Transaksi Tukar Seimbang (1:1) boleh pakai "Pelanggan Umum" tanpa identitas.
 
@@ -235,6 +231,7 @@ NP (Laba Bersih) = R - E
 - Kasir cepat (walk-in & antar), 5 tier harga.
 - Pengurangan otomatis stok tutup galon.
 - Tracking galon pinjaman gratis (unit fisik).
+- Pemantauan makro aset armada galon (Total Dimiliki, Dipinjam, Standby).
 - Low-stock alert stok tutup galon.
 - Pencatatan beban operasional + laba bersih.
 - Filter riwayat pembelian bulanan pelanggan.
@@ -252,6 +249,7 @@ NP (Laba Bersih) = R - E
 ### Dibatalkan Lewat Revisi (Sempat Direncanakan, Lalu Tidak Jadi)
 
 - **Modul reminder otomatis perawatan filter** (kalkulasi hari jatuh tempo, dashboard kartu status warna) — diganti cukup pencatatan biaya di modul Expenses.
+- **Pelacakan perpindahan galon fisik di dalam depot** (pengisian ulang dan penyimpanan galon beserta fitur pencatatannya oleh kasir) — dikeluarkan lewat revisi 9 Oktober 2026 karena sering terlewat dicatat dan memicu error 422 palsu saat transaksi. Sistem cukup memotong tutup galon, mengurangi Total Galon Dimiliki pada galon baru, mencatat `Gp`, dan memantau aset armada secara makro.
 - **2 role akun kurir terpisah** (Antar Dekat & Antar Jauh) untuk pekerja lapangan berliterasi teknologi rendah — dibatalkan, tetap 1 akun kasir/kurir menangani semua.
 
 ---
@@ -273,9 +271,9 @@ NP (Laba Bersih) = R - E
 
 - **Durasi:** 8 minggu, 4 sprint @ 2 minggu — **tetap 4 sprint**, tidak jadi ditambah Sprint 5 meski ada revisi (tiket revisi didistribusikan ke slot Sprint 3 & 4 yang tersisa).
 - Sprint 1 (Minggu 1–2): Fondasi arsitektur, DB, web profil publik. **Status: selesai** (9 tabel bisnis dimigrasi, seeder akun admin/kasir, login/logout).
-- Sprint 2 (Minggu 3–4): Modul kasir POS (walk-in), otomatisasi stok tutup & galon fisik, restock, dan Isi Galon Kosong. **Status: sedang berjalan.**
+- Sprint 2 (Minggu 3–4): Modul kasir POS (walk-in), otomatisasi stok tutup, pengurangan Total Galon Dimiliki pada galon baru, pencatatan saldo galon pinjaman, dan restock. **Status: sedang berjalan.**
 - Sprint 3 (Minggu 5–6): Modul kurir & pelacakan galon pinjaman + **revisi harga 5-tier**; juga pesan antar, rollback pembatalan order, dan retur galon murni (`price_tier_id` nullable).
-- Sprint 4 (Minggu 7–8): Laporan keuangan, **low-stock alert**, **filter pembelian bulanan**, deployment cPanel (modul reminder filter **dihapus** dari scope sprint ini).
+- Sprint 4 (Minggu 7–8): Laporan keuangan, **low-stock alert**, **filter pembelian bulanan**, deployment cPanel, tampilan pemantauan makro aset armada galon (digabung Dashboard Pemilik); modul reminder filter **dihapus** dari scope sprint ini.
 - Backlog dikelola sebagai 81 GitHub Issues (kode tiket format `[SX-ROLE-NN]`) di GitHub Projects, board Kanban 5 kolom.
 
 ---
@@ -294,13 +292,33 @@ Timeline tetap 8 minggu / 4 sprint di seluruh proses revisi ini.
 
 ### Revisi Dokumen v1.1 (6 Oktober 2026)
 
-Penyelarasan dokumen dengan database Sprint 1 dan aturan stok galon fisik (bukan revisi permintaan klien):
+Penyelarasan dokumen dengan database Sprint 1 dan aturan galon (bukan revisi permintaan klien):
 
 1. **Kategori `expenses`** tetap 3 kelompok sesuai data dictionary, bukan 6 kategori.
-2. **Stok galon fisik:** galon baru, Tukar Seimbang, dan Pinjam mengurangi Siap Jual; Tukar Seimbang dan Kembalikan menambah Kosong Depot; kasir mencatat konversi galon kosong → siap jual (dokumen baru `BR-INV-02`).
-3. **`inventory_logs`:** tambah `current_stock`, nilai `reason` `rollback` dan `konversi_isi` (migrasi tambahan, tiket `S2-BE-05`).
+2. **Dokumen baru `BR-INV-02`** untuk aturan galon fisik dan saldo pinjaman (ditulis ulang total pada v1.2 di bawah).
+3. **`inventory_logs`:** tambah `current_stock` dan nilai `reason` `rollback` (migrasi tambahan, tiket `S2-BE-05`).
 4. **Status pesanan:** `batal` ditambahkan ke state machine; walk-in langsung `selesai`.
 5. **`BR-INV-01` v1.1:** penamaan kolom dan nilai ENUM disamakan dengan database; rumus tidak berubah.
-6. **Checklist form kasir v1.1:** tabel diperbaiki, validasi stok galon siap jual dan form inventaris ditambahkan.
-7. **Restock galon fisik** selalu masuk ke `galon_kosong_depot`; alokasi Stok Dijual / Armada Depot hanya untuk `reason` log; perpindahan ke Siap Jual hanya lewat Isi Galon Kosong.
-8. **Ditunda ke Sprint 3:** `price_tier_id` nullable untuk retur murni, rollback pembatalan order (termasuk Gp), dan pesan antar untuk mutasi galon fisik.
+6. **Checklist form kasir v1.1:** tabel diperbaiki dan form inventaris ditambahkan.
+7. **Restock galon fisik:** alokasi Stok Dijual / Armada Depot hanya untuk `reason` log.
+8. **Ditunda ke Sprint 3:** `price_tier_id` nullable untuk retur murni, rollback pembatalan order (termasuk Gp), dan pesan antar untuk mutasi saldo galon pinjaman.
+
+### Revisi Dokumen v1.2 (9 Oktober 2026)
+
+Penyederhanaan ruang lingkup inventaris (keputusan tim, bukan permintaan klien):
+
+1. **Pelacakan galon fisik internal depot dihapus**, termasuk fitur pencatatan pengisian galon oleh kasir. Alasan: kasir/operator sering lupa mencatat pengisian sehingga transaksi rawan ditolak 422 palsu.
+2. **Fokus inventaris menjadi tiga hal:** (a) pemotongan otomatis tutup galon per transaksi (`BR-INV-01`); (b) pemantauan unit galon pinjaman pelanggan (`Gp`) agar aset tidak hilang; (c) pemantauan makro aset armada (Total Galon Dimiliki, Galon Dipinjam, Galon Standby = Total − Dipinjam) untuk pertimbangan membeli galon baru.
+3. **Database:** migrasi Sprint 1 tidak diubah dan tidak diulang. Tabel `inventories` tetap ada; transaksi memutasi baris `tutup_galon` dan, pada galon baru, baris penampung Total Galon Dimiliki (dilengkapi v1.3). Nilai ENUM `konversi_isi` pada `inventory_logs` tidak dipakai; `reason` hanya `transaksi`, `restock_stok_jual`, `restock_armada_depot`, dan `rollback` (Sprint 3).
+4. **Validasi checkout:** stok yang diperiksa hanya tutup galon. Validasi `Gp` (identitas pelanggan wajib untuk pinjam/kembalikan, pengembalian tidak boleh melebihi `Gp`) tidak berubah.
+5. **Dokumen yang diperbarui:** `BR-INV-02` v2.0 (ditulis ulang), `DOC-VAL-POS-02` v1.2 (test case dirapikan, TC-VAL-09 lama dihapus), data dictionary v1.2, dan dokumen konteks v1.2.
+
+### Revisi Dokumen v1.3 (9 Oktober 2026)
+
+Penyelarasan keputusan lanjutan (keputusan tim):
+
+1. **Penampung Total Galon Dimiliki** dikonfirmasi pada baris `galon_kosong_depot` tabel `inventories`; migrasi Sprint 1 tidak diubah sama sekali.
+2. **Penjualan galon baru** (beli putus) otomatis mengurangi tutup galon dan Total Galon Dimiliki sebesar jumlah galon baru; audit dicatat 2 baris `inventory_logs` (`reason = 'transaksi'`).
+3. **Total Galon Dimiliki tidak memblokir transaksi:** tidak ada 422 berdasarkan angka ini; nilai minus hanya memberi penanda untuk admin. Validasi 422 murni untuk stok tutup galon.
+4. **Tampilan pemantauan makro** (Total, Dipinjam, Standby) dijadwalkan Sprint 4, digabung dengan Dashboard Pemilik (`S4-FE-02` #62; `S4-FE-01` #61 sudah dibatalkan). Tidak ada tiket baru di Sprint 2.
+5. **Dokumen yang diperbarui:** `BR-INV-02` v2.1, `DOC-VAL-POS-02` v1.3 (TC-VAL-16), data dictionary v1.3, dan dokumen konteks ini v1.3.
