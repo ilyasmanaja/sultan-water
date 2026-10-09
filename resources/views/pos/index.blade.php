@@ -179,7 +179,7 @@
         </header>
 
         <!-- Main Body: 4 KPI Cards Top + Split Content (Product Catalog & Quick POS Cart) -->
-        <div class="flex-1 overflow-y-auto px-4 sm:px-5 lg:px-8 pb-6 touch-scroll">
+        <div class="flex-1 overflow-y-auto px-4 sm:px-5 lg:px-8 pb-28 lg:pb-6 touch-scroll">
             
             <!-- ================================================================= -->
             <!-- 3. TOP KPI METRICS BAR (PERSIS 4 KARTU PADA GAMBAR)                -->
@@ -451,11 +451,13 @@
                 <!-- KOLOM KANAN (5/12): QUICK POS PANEL (PERSIS GAYA BEHANCE)     -->
                 <!-- ------------------------------------------------------------- -->
                 <div class="lg:col-span-5"
-                     :class="mobileCartOpen ? 'fixed inset-0 z-50 p-4 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center' : 'hidden lg:block'">
+                     :class="mobileCartOpen ? 'fixed inset-0 z-50 p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center' : 'hidden lg:block'">
                     
-                    <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between max-w-lg w-full max-h-[90vh] overflow-y-auto touch-scroll">
+                    <div class="bg-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-2xl flex flex-col justify-between max-w-lg w-full max-h-[88dvh] sm:max-h-[90vh] overflow-y-auto touch-scroll">
                         
                         <div>
+                            <!-- Mobile Bottom Sheet Drag Handle Indicator -->
+                            <div class="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3"></div>
                             <!-- Header Quick POS -->
                             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                                 <div>
@@ -635,6 +637,47 @@
 
             </div>
 
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- STICKY THUMB-ZONE BOTTOM ACTION BAR (KHUSUS MOBILE - JANGKAUAN JEMPOL)    -->
+        <!-- ========================================================================= -->
+        <div x-show="!mobileCartOpen" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 translate-y-6"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="fixed bottom-0 inset-x-0 z-40 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-2xl lg:hidden">
+            <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+                
+                <!-- Kiri: Info Ringkas Status Pesanan & Saklar Mode Cepat -->
+                <div class="min-w-0 flex items-center gap-2.5">
+                    <button type="button" 
+                            @click="orderType = orderType === 'ambil_sendiri' ? 'pesan_antar' : 'ambil_sendiri'"
+                            class="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition active:scale-95 shadow-xs"
+                            :class="orderType === 'ambil_sendiri' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'"
+                            title="Ganti Mode Pesanan">
+                        <i class="fa-solid" :class="orderType === 'ambil_sendiri' ? 'fa-store text-base' : 'fa-motorcycle text-base'"></i>
+                    </button>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wide text-slate-400" x-text="orderType === 'ambil_sendiri' ? 'Walk-in' : 'Antar Kurir'"></span>
+                            <template x-if="cart.length > 0">
+                                <span class="px-1.5 py-0.2 bg-blue-100 text-blue-800 text-[10px] font-extrabold rounded-md" x-text="totalGalonQty + ' Galon'"></span>
+                            </template>
+                        </div>
+                        <div class="text-sm font-black text-slate-900 leading-tight" x-text="cart.length > 0 ? rupiah(grandTotal) : 'Keranjang Kosong'"></div>
+                    </div>
+                </div>
+
+                <!-- Kanan: Tombol Thumb-Friendly Buka Quick POS / Checkout -->
+                <button type="button" 
+                        @click="mobileCartOpen = true"
+                        class="min-h-[46px] px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-xs sm:text-sm rounded-2xl shadow-md shadow-blue-500/25 flex items-center gap-2 active:scale-95 transition shrink-0">
+                    <i class="fa-solid fa-cart-shopping text-xs"></i>
+                    <span>Quick POS</span>
+                    <span x-show="cart.length > 0" class="w-5 h-5 rounded-full bg-white text-blue-600 text-[10px] font-black flex items-center justify-center" x-text="cart.length"></span>
+                </button>
+            </div>
         </div>
 
     </main>
