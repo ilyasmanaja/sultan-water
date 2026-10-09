@@ -30,8 +30,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 Route::middleware(['auth', 'role:kasir'])->group(function () {
 
+    Route::get('/pos', function () {
+        return view('pos.index');
+    })->name('pos.index');
+
     Route::get('/pos/dashboard', function () {
-        return view('pos.dashboard');
+        return view('pos.index');
     })->name('pos.dashboard');
 
 });
@@ -41,8 +45,12 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 //     return view('admin.dashboard');
 // })->name('admin.dashboard');
 
+// Route::get('/pos', function () {
+//     return view('pos.index');
+// })->name('pos.index');
+
 // Route::get('/pos/dashboard', function () {
-//     return view('pos.dashboard');
+//     return view('pos.index');
 // })->name('pos.dashboard');
 
 
