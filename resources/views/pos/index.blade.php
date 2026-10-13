@@ -176,7 +176,7 @@
                                 <th class="py-3 px-4">Pelanggan</th>
                                 <th class="py-3 px-4">Item & Opsi Galon</th>
                                 <th class="py-3 px-4 text-right">Total Bayar</th>
-                                <th class="py-3 px-4">Status Bayar</th>
+                                <th class="py-3 px-4 text-center">Status Bayar</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-xs">
