@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +39,8 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
         return view('pos.index');
     })->name('pos.dashboard');
 
+    Route::post('/pos/orders/refill', [OrderController::class, 'storeRefill'])->name('pos.orders.refill');
+
 });
 
 // --- ROUTE UNTUK TES UI DASHBOARD (TANPA AUTH) ---
@@ -58,3 +61,4 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
+
