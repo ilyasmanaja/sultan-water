@@ -61,7 +61,7 @@ Login pakai username/password standar Laravel Auth, role dibedakan lewat middlew
 - Transaksi walk-in & pesan antar, pilihan Ambil Sendiri / Pesan Antar.
 - Item: Isi Ulang Galon (dengan 4 pilihan tier harga) atau Galon Baru + Isi (harga tetap).
 - Opsi galon fisik saat transaksi: Tukar Galon Seimbang (1:1), Pinjam Galon Depot Gratis, Kembalikan Galon Pinjaman.
-- Kalkulator kembalian otomatis (Tunai) / status QRIS statis.
+- Penyederhanaan status pembayaran: Walk-in otomatis Lunas, Pesan Antar (COD) berstatus Belum Lunas (tanpa kalkulator uang/input kembalian manual di kasir).
 - Smart search autocomplete pelanggan + Quick Add pelanggan baru langsung dari form transaksi.
 - Modal konfirmasi transaksi berhasil.
 
