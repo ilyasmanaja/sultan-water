@@ -45,8 +45,14 @@ class Order extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class, 'order_id');
+    }
+
+    // (Opsional) Alias jika relasi orderItems tetap ingin dipertahankan
     public function orderItems(): HasMany
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->items();
     }
 }

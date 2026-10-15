@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\OrderController;
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -55,8 +56,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Endpoint Transaksi POS Kasir (S2-BE-01 & S2-BE-02)
-    Route::prefix('pos')->name('pos.')->group(function () {
-        Route::post('/refill', [OrderController::class, 'storeRefill'])->name('refill.store');
-        Route::post('/new-gallon', [OrderController::class, 'storeNewGallon'])->name('new-gallon.store');
+    Route::prefix('pos/order')->name('pos.order.')->group(function () {
+        Route::post('/refill', [OrderController::class, 'storeRefill'])->name('refill');
+        Route::post('/new-gallon', [OrderController::class, 'storeNewGallon'])->name('new-gallon');
     });
 });
