@@ -40,11 +40,6 @@ class StoreOrderRequest extends FormRequest
 
             // Validasi Pembayaran (S2-BE-04)
             'payment_method' => ['required', 'in:tunai,qris'],
-            'cash_received' => [
-                'nullable',
-                'numeric',
-                'required_if:payment_method,tunai',
-            ],
 
             // Validasi Item Transaksi (S2-BE-01 & S2-BE-02)
             'items' => ['required', 'array', 'min:1'],
@@ -215,17 +210,6 @@ class StoreOrderRequest extends FormRequest
                         $validator->errors()->add(
                             'items',
                             "Jumlah pengembalian ({$totalReturnQty}) melebihi galon yang sedang dipinjam pelanggan ({$customerBorrowed} unit)."
-                        );
-                    }
-                }
-
-                // 4. Validasi Pembayaran Tunai Kurang Bayar (TC-VAL-05 / S2-BE-04)
-                if ($this->input('payment_method') === 'tunai') {
-                    $cashReceived = (float) $this->input('cash_received', 0);
-                    if ($cashReceived < $calculatedTotalAmount) {
-                        $validator->errors()->add(
-                            'cash_received',
-                            'Uang tunai yang diterima kurang dari total tagihan.'
                         );
                     }
                 }

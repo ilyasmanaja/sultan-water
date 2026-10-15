@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\OrderController;
+use App\Models\Order;
+use App\Models\Customer;
+use App\Models\Inventory;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -41,11 +45,45 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 Route::middleware(['auth', 'role:kasir'])->group(function () {
 
     Route::get('/pos', function () {
-        return view('pos.index');
+        return redirect()->route('pos.dashboard');
     })->name('pos.index');
 
     Route::get('/pos/dashboard', function () {
-        return view('pos.index');
+        // 1. Ambil order hari ini beserta relasinya
+        $orders = Order::with(['customer', 'items.product', 'items.priceTier'])
+            ->whereDate('created_at', today())
+            ->latest()
+            ->get()
+            ->map(function ($order) {
+                $firstItem = $order->items->first();
+                return [
+                    'id'               => $order->id,
+                    'order_number'     => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
+                    'time'             => $order->created_at->format('H:i'),
+                    'order_type'       => $order->order_type,
+                    'delivery_status'  => $order->delivery_status,
+                    'payment_status'   => $order->payment_status,
+                    'customer_name'    => $order->customer->name ?? 'Pelanggan Umum',
+                    'customer_address' => $order->customer->address ?? '-',
+                    'tier_name'        => $firstItem?->priceTier?->name ?? 'Isi Ulang',
+                    'tier_code'        => $firstItem?->priceTier?->code ?? 'letak_kedai',
+                    'product_type'     => $firstItem?->product?->type ?? 'isi_ulang',
+                    'qty'              => (int) ($firstItem?->quantity ?? 1),
+                    'total_amount'     => (float) $order->total_amount,
+                    'gallon_action'    => $firstItem?->gallon_action ?? 'tidak_ada',
+                    'gallon_qty'       => (int) ($firstItem?->gallon_qty ?? 0),
+                    'payment_method'   => $order->payment_method,
+                ];
+            });
+
+        // 2. Ambil data pelanggan untuk dropdown & info pinjaman
+        $customers = Customer::select('id', 'name', 'whatsapp_number as whatsapp', 'address', 'borrowed_gallons')->get();
+
+        // 3. Ambil stok aktual dari tabel inventories
+        $tutupStock = Inventory::where('item_type', 'tutup_galon')->value('quantity') ?? 0;
+        $totalGalonDepot = Inventory::where('item_type', 'galon_kosong_depot')->value('quantity') ?? 0;
+
+        return view('pos.index', compact('orders', 'customers', 'tutupStock', 'totalGalonDepot'));
     })->name('pos.dashboard');
 
 });
@@ -55,8 +93,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Endpoint Transaksi POS Kasir (S2-BE-01 & S2-BE-02)
-    Route::prefix('pos')->name('pos.')->group(function () {
-        Route::post('/refill', [OrderController::class, 'storeRefill'])->name('refill.store');
-        Route::post('/new-gallon', [OrderController::class, 'storeNewGallon'])->name('new-gallon.store');
+    Route::prefix('pos/order')->name('pos.order.')->group(function () {
+        Route::post('/refill', [OrderController::class, 'storeRefill'])->name('refill');
+        Route::post('/new-gallon', [OrderController::class, 'storeNewGallon'])->name('new-gallon');
     });
 });
