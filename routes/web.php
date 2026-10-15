@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Models\Order;
 use App\Models\Customer;
 use App\Models\Inventory;
+use App\Http\Controllers\PriceTierController;
 
 
 /*
@@ -37,6 +38,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/restock', [InventoryController::class, 'showRestockForm'])->name('restock');
         Route::post('/restock/cap', [InventoryController::class, 'restockCap'])->name('restock.cap');
         Route::post('/restock/gallon', [InventoryController::class, 'restockGallon'])->name('restock.gallon');
+    });
+
+    // Endpoint CRUD Master Tier Harga (S3-BE-09)
+    Route::prefix('admin/price-tiers')->name('admin.price-tiers.')->group(function () {
+        Route::get('/', [PriceTierController::class, 'index'])->name('index');
+        Route::put('/{priceTier}', [PriceTierController::class, 'update'])->name('update');
     });
 
 });
