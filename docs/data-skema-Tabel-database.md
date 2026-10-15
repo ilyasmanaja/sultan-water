@@ -1,19 +1,20 @@
 # Data Dictionary — Sultan Water POS
 
-> Skema database (deliverable tiket `S1-PM-02`). **Versi 1.3 — 9 Oktober 2026.** Status: struktur Sprint 1 sudah dibuat sebagai migrasi dan **diverifikasi sesuai** dengan dokumen ini; perubahan terencana ditandai 🆕 (Sprint 2) dan 🕒 (Sprint 3). Disusun berdasarkan `PROJECT-CONTEXT-Sultan-Water.md` (versi setelah semua revisi klien).
-> 
+> Skema database (deliverable tiket `S1-PM-02`). **Versi 1.4 — Oktober 2026.** Status: struktur Sprint 1 & 2 telah dimigrasi; perubahan Sprint 3 (order_items.price_tier_id nullable) diterapkan pada tiket S3-BE-03.
+
 > **Perubahan dari rencana awal 9 tabel:** `maintenances` **dihapus** (modul reminder filter dibatalkan), digantikan `price_tiers` (tabel baru, wajib untuk revisi harga 5-tier). Total tetap 9 tabel.
 
 ---
 
 ## Riwayat Revisi
 
-| Versi | Tanggal        | Perubahan                                                                                  |
-|:----- |:-------------- |:------------------------------------------------------------------------------------------ |
-| 1.0   | Sprint 1       | Draf awal 9 tabel (`S1-PM-02`).                                                            |
-| 1.1   | 6 Oktober 2026 | Disinkronkan dengan migrasi & model Sprint 1; ditambah perubahan terencana Sprint 2 dan 3. |
-| 1.2   | 9 Oktober 2026 | Ruang lingkup inventaris disederhanakan: baris aktif operasional hanya `tutup_galon`; ENUM `konversi_isi` tidak dipakai. |
-| 1.3   | 9 Oktober 2026 | Penampung Total Galon Dimiliki dikonfirmasi; penjualan galon baru mengurangi penampung itu otomatis (2 baris log `transaksi`). |
+| Versi | Tanggal        | Perubahan                                                                                                                                                 |
+|:----- |:-------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0   | Sprint 1       | Draf awal 9 tabel (`S1-PM-02`).                                                                                                                           |
+| 1.1   | 6 Oktober 2026 | Disinkronkan dengan migrasi & model Sprint 1; ditambah perubahan terencana Sprint 2 dan 3.                                                                |
+| 1.2   | 9 Oktober 2026 | Ruang lingkup inventaris disederhanakan: baris aktif operasional hanya `tutup_galon`; ENUM `konversi_isi` tidak dipakai.                                  |
+| 1.3   | 9 Oktober 2026 | Penampung Total Galon Dimiliki dikonfirmasi; penjualan galon baru mengurangi penampung itu otomatis (2 baris log `transaksi`).                            |
+| 1.4   | Oktober 2026   | `order_items.price_tier_id` resmi diubah menjadi NULLABLE via migrasi Sprint 3. Penegasan status pembayaran COD dan pengecualian omzet untuk order batal. |
 
 **Perubahan pada v1.1:**
 
@@ -106,17 +107,17 @@ Jenis produk dasar (disederhanakan — harga sekarang murni dari `price_tiers`, 
 
 Header transaksi.
 
-| Kolom                   | Tipe                                         | Constraint                    | Keterangan                                                                                                                                                                                                                        |
-| ----------------------- | -------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| id                      | BIGINT UNSIGNED                              | PK, AUTO_INCREMENT            |                                                                                                                                                                                                                                   |
-| customer_id             | BIGINT UNSIGNED                              | NULLABLE, FK → `customers.id` | NULL = Pelanggan Umum                                                                                                                                                                                                             |
-| order_type              | ENUM('ambil_sendiri','pesan_antar')          | NOT NULL                      |                                                                                                                                                                                                                                   |
-| delivery_status         | ENUM('pending','diantar','selesai', 'batal') | NOT NULL, DEFAULT 'pending'   | State machine: `pending → diantar → selesai`; `batal` hanya dari `pending`/`diantar`; `selesai` dan `batal` bersifat final. Transaksi `ambil_sendiri` (walk-in) langsung disimpan `selesai` oleh service, bukan default `pending` |
-| payment_method          | ENUM('tunai','qris')                         | NOT NULL                      |                                                                                                                                                                                                                                   |
-| payment_status          | ENUM('lunas','belum_lunas')                  | NOT NULL, DEFAULT 'lunas'     |                                                                                                                                                                                                                                   |
-| total_amount            | DECIMAL(12,2)                                | NOT NULL, DEFAULT 0           | Jumlah seluruh order_items                                                                                                                                                                                                        |
-| created_by              | BIGINT UNSIGNED                              | NOT NULL, FK → `users.id`     | Kasir/kurir yang input                                                                                                                                                                                                            |
-| created_at / updated_at | TIMESTAMP                                    | NULLABLE                      |                                                                                                                                                                                                                                   |
+| Kolom                   | Tipe                                        | Constraint                                             | Keterangan                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| id                      | BIGINT UNSIGNED                             | PK, AUTO_INCREMENT                                     |                                                                                                                                                                                                              |
+| customer_id             | BIGINT UNSIGNED                             | NULLABLE, FK → `customers.id`                          | NULL = Pelanggan Umum                                                                                                                                                                                        |
+| order_type              | ENUM('ambil_sendiri','pesan_antar')         | NOT NULL                                               |                                                                                                                                                                                                              |
+| delivery_status         | ENUM('pending','diantar','selesai','batal') | NOT NULL, DEFAULT 'pending'NOT NULL, DEFAULT 'pending' | State machine: `pending → diantar → selesai`; `batal` hanya dari `pending`/`diantar`; `selesai` dan `batal` final. Walk-in langsung `selesai`, pesan antar mulai dari `pending`.                             |
+| payment_method          | ENUM('tunai','qris')                        | NOT NULL                                               |                                                                                                                                                                                                              |
+| payment_status          | ENUM('lunas','belum_lunas')                 | NOT NULL, DEFAULT 'lunas'                              | Walk-in langsung `lunas`. Pesan antar bernilai `belum_lunas` (COD) dan diubah menjadi `lunas` saat pengantaran selesai. Order batal tetap `belum_lunas` sehingga tidak dihitung dalam omzet penjualan ($R$). |
+| total_amount            | DECIMAL(12,2)                               | NOT NULL, DEFAULT 0                                    | Jumlah seluruh order_items                                                                                                                                                                                   |
+| created_by              | BIGINT UNSIGNED                             | NOT NULL, FK → `users.id`                              | Kasir/kurir yang input                                                                                                                                                                                       |
+| created_at / updated_at | TIMESTAMP                                   | NULLABLE                                               |                                                                                                                                                                                                              |
 
 ---
 
@@ -124,18 +125,18 @@ Header transaksi.
 
 Detail baris item per transaksi.
 
-| Kolom                   | Tipe                                                     | Constraint                      | Keterangan                                                                                                                                                |
-| ----------------------- | -------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| id                      | BIGINT UNSIGNED                                          | PK, AUTO_INCREMENT              |                                                                                                                                                           |
-| order_id                | BIGINT UNSIGNED                                          | NOT NULL, FK → `orders.id`      |                                                                                                                                                           |
-| product_id              | BIGINT UNSIGNED                                          | NOT NULL, FK → `products.id`    |                                                                                                                                                           |
-| price_tier_id           | BIGINT UNSIGNED                                          | NOT NULL, FK → `price_tiers.id` | Tier yang dipilih kasir saat itu. 🕒 Sprint 3: dibuat nullable untuk baris retur galon murni (`quantity = 0`, `unit_price = 0`); sampai saat itu NOT NULL |
-| quantity                | INT UNSIGNED                                             | NOT NULL                        | Jumlah galon                                                                                                                                              |
-| unit_price              | DECIMAL(10,2)                                            | NOT NULL                        | **Snapshot** harga saat transaksi (supaya histori aman walau harga berubah nanti)                                                                         |
-| subtotal                | DECIMAL(12,2)                                            | NOT NULL                        | `quantity * unit_price`                                                                                                                                   |
-| gallon_action           | ENUM('tukar_seimbang','pinjam','kembalikan','tidak_ada') | NOT NULL, DEFAULT 'tidak_ada'   |                                                                                                                                                           |
-| gallon_qty              | INT UNSIGNED                                             | NOT NULL, DEFAULT 0             | Jumlah galon dipinjam/dikembalikan (update `customers.borrowed_gallons`). Pada `tukar_seimbang` nilainya selalu sama dengan `quantity` (diisi server)     |
-| created_at / updated_at | TIMESTAMP                                                | NULLABLE                        |                                                                                                                                                           |
+| Kolom                   | Tipe                                                     | Constraint                      | Keterangan                                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id                      | BIGINT UNSIGNED                                          | PK, AUTO_INCREMENT              |                                                                                                                                                                       |
+| order_id                | BIGINT UNSIGNED                                          | NOT NULL, FK → `orders.id`      |                                                                                                                                                                       |
+| product_id              | BIGINT UNSIGNED                                          | NOT NULL, FK → `products.id`    |                                                                                                                                                                       |
+| price_tier_id           | BIGINT UNSIGNED                                          | NULLABLE, FK → `price_tiers.id` | Tier yang dipilih kasir. Bersifat NULLABLE mulai Sprint 3 khusus untuk baris retur galon murni (`quantity = 0`, `unit_price = 0`). Wajib terisi jika `quantity >= 1`. |
+| quantity                | INT UNSIGNED                                             | NOT NULL                        | Jumlah galon                                                                                                                                                          |
+| unit_price              | DECIMAL(10,2)                                            | NOT NULL                        | **Snapshot** harga saat transaksi (supaya histori aman walau harga berubah nanti)                                                                                     |
+| subtotal                | DECIMAL(12,2)                                            | NOT NULL                        | `quantity * unit_price`                                                                                                                                               |
+| gallon_action           | ENUM('tukar_seimbang','pinjam','kembalikan','tidak_ada') | NOT NULL, DEFAULT 'tidak_ada'   |                                                                                                                                                                       |
+| gallon_qty              | INT UNSIGNED                                             | NOT NULL, DEFAULT 0             | Jumlah galon dipinjam/dikembalikan (update `customers.borrowed_gallons`). Pada `tukar_seimbang` nilainya selalu sama dengan `quantity` (diisi server)                 |
+| created_at / updated_at | TIMESTAMP                                                | NULLABLE                        |                                                                                                                                                                       |
 
 ---
 
@@ -153,10 +154,10 @@ Stok agregat (bukan per-transaksi). 3 baris tetap hasil migrasi Sprint 1 (`item_
 
 Peran tiap baris setelah penyederhanaan (v1.2):
 
-| `item_type`          | Peran                                                                                                                                                                      |
-|:-------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tutup_galon`        | **Aktif.** Dipotong otomatis di setiap transaksi dan ditambah lewat restock tutup (`BR-INV-01`).                                                                           |
-| `galon_siap_jual`    | **Tidak dipakai.** Tetap ada karena migrasi Sprint 1 tidak diubah. Tidak dimutasi dan tidak dicatat di `inventory_logs`; seeder mengisi `quantity = 0`.                    |
+| `item_type`          | Peran                                                                                                                                                                                                                                                                                   |
+|:-------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tutup_galon`        | **Aktif.** Dipotong otomatis di setiap transaksi dan ditambah lewat restock tutup (`BR-INV-01`).                                                                                                                                                                                        |
+| `galon_siap_jual`    | **Tidak dipakai.** Tetap ada karena migrasi Sprint 1 tidak diubah. Tidak dimutasi dan tidak dicatat di `inventory_logs`; seeder mengisi `quantity = 0`.                                                                                                                                 |
 | `galon_kosong_depot` | **Penampung Total Galon Dimiliki (G_total).** Nama ENUM warisan Sprint 1 (keputusan: migrasi tidak diubah). Bertambah lewat restock galon admin; berkurang otomatis sebesar `Q_baru` pada penjualan galon baru; tidak diubah oleh transaksi lain. Boleh bernilai minus (penanda admin). |
 
 > Mutasi transaksi pada `tutup_galon` diatur oleh `BR-INV-01`. Aturan saldo pinjaman, G_total, dan pemantauan armada galon ada di `BR-INV-02` v2.1. Seeder 3 baris awal dikerjakan lewat tiket Sprint 2.
@@ -169,24 +170,24 @@ Peran tiap baris setelah penyederhanaan (v1.2):
 
 Jejak audit tiap perubahan stok. Tidak punya `updated_at` (log bersifat tambah-saja, model `InventoryLog` menonaktifkan `UPDATED_AT`).
 
-| Kolom            | Tipe                                                                                         | Constraint                      | Keterangan                                                                                                                 |
-| ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| id               | BIGINT UNSIGNED                                                                              | PK, AUTO_INCREMENT              |                                                                                                                            |
-| inventory_id     | BIGINT UNSIGNED                                                                              | NOT NULL, FK → `inventories.id` | Baris stok yang berubah                                                                                                    |
-| change_amount    | INT                                                                                          | NOT NULL                        | **Bertanda**: negatif = pengurangan (transaksi), positif = penambahan (restock, rollback)                                  |
-| current_stock 🆕 | INT                                                                                          | NOT NULL, DEFAULT 0             | Saldo baris stok tersebut **setelah** mutasi (snapshot audit). Default 0 hanya agar migrasi aman; service wajib mengisinya |
-| reason           | ENUM('transaksi','restock_stok_jual','restock_armada_depot','rollback' 🆕)                    | NOT NULL                        | Alasan mutasi                                                                                                              |
-| order_id         | BIGINT UNSIGNED                                                                              | NULLABLE, FK → `orders.id`      | Diisi jika `reason` = `transaksi` atau `rollback`; NULL untuk restock                                                      |
-| created_by       | BIGINT UNSIGNED                                                                              | NOT NULL, FK → `users.id`       |                                                                                                                            |
-| created_at       | TIMESTAMP                                                                                    | NULLABLE                        |                                                                                                                            |
+| Kolom            | Tipe                                                                       | Constraint                      | Keterangan                                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| id               | BIGINT UNSIGNED                                                            | PK, AUTO_INCREMENT              |                                                                                                                            |
+| inventory_id     | BIGINT UNSIGNED                                                            | NOT NULL, FK → `inventories.id` | Baris stok yang berubah                                                                                                    |
+| change_amount    | INT                                                                        | NOT NULL                        | **Bertanda**: negatif = pengurangan (transaksi), positif = penambahan (restock, rollback)                                  |
+| current_stock 🆕 | INT                                                                        | NOT NULL, DEFAULT 0             | Saldo baris stok tersebut **setelah** mutasi (snapshot audit). Default 0 hanya agar migrasi aman; service wajib mengisinya |
+| reason           | ENUM('transaksi','restock_stok_jual','restock_armada_depot','rollback' 🆕) | NOT NULL                        | Alasan mutasi                                                                                                              |
+| order_id         | BIGINT UNSIGNED                                                            | NULLABLE, FK → `orders.id`      | Diisi jika `reason` = `transaksi` atau `rollback`; NULL untuk restock                                                      |
+| created_by       | BIGINT UNSIGNED                                                            | NOT NULL, FK → `users.id`       |                                                                                                                            |
+| created_at       | TIMESTAMP                                                                  | NULLABLE                        |                                                                                                                            |
 
 **Konvensi pencatatan** (rincian di `BR-INV-01` §4.3 dan `BR-INV-02`):
 
-| Kejadian                         | Baris log yang dibuat                                                                               | `reason`                                     |
-|:-------------------------------- |:--------------------------------------------------------------------------------------------------- |:-------------------------------------------- |
+| Kejadian                         | Baris log yang dibuat                                                                                                                                                  | `reason`                                     |
+|:-------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------- |
 | Transaksi isi ulang / galon baru | Satu baris untuk `tutup_galon`; pada galon baru ditambah satu baris untuk penampung G_total (−`Q_baru`). `order_id` terisi. Pengembalian murni tidak membuat baris log | `transaksi`                                  |
-| Restock                          | Satu baris, `change_amount` positif. Restock tutup pada `tutup_galon`; restock galon fisik pada baris penampung Total Galon Dimiliki       | `restock_stok_jual` / `restock_armada_depot` |
-| Pembatalan order (Sprint 3)      | Kebalikan dari baris transaksi, `order_id` terisi                                                                                          | `rollback`                                   |
+| Restock                          | Satu baris, `change_amount` positif. Restock tutup pada `tutup_galon`; restock galon fisik pada baris penampung Total Galon Dimiliki                                   | `restock_stok_jual` / `restock_armada_depot` |
+| Pembatalan order (Sprint 3)      | Kebalikan dari baris transaksi, `order_id` terisi                                                                                                                      | `rollback`                                   |
 
 > Restock galon fisik menambah Total Galon Dimiliki (baris penampung `galon_kosong_depot`) dengan reason `restock_stok_jual` / `restock_armada_depot` sesuai alokasi admin. Restock tutup galon selalu menambah `tutup_galon` dan mencatat `reason = 'restock_stok_jual'` tanpa pilihan alokasi.
 
@@ -238,6 +239,6 @@ users ──< orders >── customers
 **Perubahan terencana:**
 
 6. 🆕 **Sprint 2 (`S2-BE-05` #25):** migrasi tambahan `inventory_logs` dibuat sebagai **file migrasi baru**, bukan edit migrasi lama (supaya database lokal anggota tim ikut berubah). Untuk mengubah ENUM `reason` di MySQL lewat `->change()`, deklarasikan ulang **seluruh** daftar nilainya: `transaksi`, `restock_stok_jual`, `restock_armada_depot`, `rollback` (tanpa `konversi_isi`). `S2-BE-03` bergantung pada migrasi ini karena service menulis `current_stock`.
-7. 🕒 **Sprint 3:** `order_items.price_tier_id` dibuat nullable untuk baris retur galon murni, bersama rollback pembatalan order (termasuk pengembalian `customers.borrowed_gallons`).
+7. ✅ **Sprint 3 (`S3-BE-03`):** `order_items.price_tier_id` resmi dibuat nullable melalui migrasi `make_price_tier_id_nullable_on_order_items_table` guna mengakomodasi retur galon murni.
 8. Transaksi `ambil_sendiri` disimpan dengan `delivery_status = 'selesai'` oleh service; default `pending` hanya relevan untuk `pesan_antar`.
 9. *(Opsional, boleh ditunda ke Sprint 4)* Index pada `orders.created_at` dan `orders.delivery_status` untuk laporan harian/bulanan dan antrean pengantaran.
