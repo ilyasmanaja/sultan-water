@@ -83,7 +83,7 @@
 </head>
 
 <body class="h-full flex flex-col md:flex-row text-slate-800 antialiased overflow-hidden select-none"
-    x-data="posApp()" @keydown.window.prevent.f2="openOrderModal = true">
+    x-data="posApp({{ Js::from($orders ?? []) }}, {{ Js::from($customers ?? []) }}, {{ $tutupStock ?? 1000 }}, {{ $totalGalonDepot ?? 50 }})" @keydown.window.prevent.f2="openOrderModal = true">
 
     <!-- ========================================================================= -->
     <!-- 1. LEFT SIDEBAR NAVIGATION                                                -->
@@ -699,12 +699,12 @@
     <!-- 8. APP LOGIC (ALPINE.JS)                                                  -->
     <!-- ========================================================================= -->
     <script>
-        function posApp() {
+        function posApp(initialOrders = [], initialCustomers = [], initialTutupStock = 1000, initialGalonStock = 50) {
             return {
                 // --- State Metadata & Master Data ---
                 todayDate: '',
-                tutupStock: 1000, // Dari inventories item_type 'tutup_galon'
-                totalGalonDepot: 50, // G_total pada inventories 'galon_kosong_depot'
+                tutupStock: initialTutupStock,
+                totalGalonDepot: initialGalonStock,
                 searchQuery: '',
                 statusFilter: 'all',
 
@@ -790,31 +790,9 @@
                     address: ''
                 },
 
-                // --- Customers List Mock / Initial ---
-                customers: [{
-                        id: 1,
-                        name: 'Pak Budi Santoso',
-                        whatsapp: '081234567890',
-                        address: 'Jl. Melati No. 4',
-                        borrowed_gallons: 2
-                    },
-                    {
-                        id: 2,
-                        name: 'Bu Siti Rahma',
-                        whatsapp: '081987654321',
-                        address: 'Komplek Griya Asri Blok A',
-                        borrowed_gallons: 0
-                    },
-                    {
-                        id: 3,
-                        name: 'Kedai Kopi Berkah',
-                        whatsapp: '085211223344',
-                        address: 'Pasar Baru No. 8',
-                        borrowed_gallons: 5
-                    }
-                ],
-
-                orders: [],
+                // --- Data Riil dari Database ---
+                customers: initialCustomers,
+                orders: initialOrders,
 
                 init() {
                     const now = new Date();
