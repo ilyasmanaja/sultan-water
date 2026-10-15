@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,7 +50,13 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 
 });
 
-// Rute Terautentikasi Umum (Admin & Kasir)
+// --- RUTE TERAUTENTIKASI UMUM (ADMIN & KASIR) ---
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Endpoint Transaksi POS Kasir (S2-BE-01 & S2-BE-02)
+    Route::prefix('pos')->name('pos.')->group(function () {
+        Route::post('/refill', [OrderController::class, 'storeRefill'])->name('refill.store');
+        Route::post('/new-gallon', [OrderController::class, 'storeNewGallon'])->name('new-gallon.store');
+    });
 });
