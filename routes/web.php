@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Models\Order;
 use App\Models\Customer;
 use App\Models\Inventory;
+use App\Models\PriceTier;
 use App\Http\Controllers\PriceTierController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeliveryController;
@@ -41,17 +42,29 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::post('/restock/gallon', [InventoryController::class, 'restockGallon'])->name('restock.gallon');
     });
 
-    // Endpoint CRUD Master Tier Harga (S3-BE-09)
+    // Endpoint CRUD Master Tier Harga (S3-BE-09 & S3-FE-07)
     Route::prefix('admin/price-tiers')->name('admin.price-tiers.')->group(function () {
-        Route::get('/', [PriceTierController::class, 'index'])->name('index');
+        Route::get('/', function (\Illuminate\Http\Request $request) {
+            $priceTiers = PriceTier::orderBy('applies_to')->orderBy('price')->get();
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $priceTiers,
+                ]);
+            }
+            return view('admin.price-tiers.index', compact('priceTiers'));
+        })->name('index');
+
         Route::put('/{priceTier}', [PriceTierController::class, 'update'])->name('update');
     });
 
 });
 
-// --- RUTE KHUSUS KASIR ---
-Route::middleware(['auth', 'role:kasir'])->group(function () {
+// --- RUTE TERAUTENTIKASI UMUM (BISA DIAKSES ADMIN & KASIR) ---
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Halaman Kasir POS Transaksi (Bisa diakses Admin & Kasir)
     Route::get('/pos', function () {
         return redirect()->route('pos.dashboard');
     })->name('pos.index');
@@ -87,18 +100,55 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
         // 2. Ambil data pelanggan untuk dropdown & info pinjaman
         $customers = Customer::select('id', 'name', 'whatsapp_number as whatsapp', 'address', 'borrowed_gallons')->get();
 
-        // 3. Ambil stok aktual dari tabel inventories
+        // 3. Ambil data master price tiers aktif dari database (S3-FE-07)
+        $priceTiers = PriceTier::where('is_active', true)->orderBy('price')->get();
+
+        // 4. Ambil stok aktual dari tabel inventories
         $tutupStock = Inventory::where('item_type', 'tutup_galon')->value('quantity') ?? 0;
         $totalGalonDepot = Inventory::where('item_type', 'galon_kosong_depot')->value('quantity') ?? 0;
 
-        return view('pos.index', compact('orders', 'customers', 'tutupStock', 'totalGalonDepot'));
+        return view('pos.index', compact('orders', 'customers', 'priceTiers', 'tutupStock', 'totalGalonDepot'));
     })->name('pos.dashboard');
 
-});
+    // Halaman Antrean Kurir Mobile (S3-FE-01 s.d. S3-FE-05)
+    Route::get('/delivery/queue', function () {
+        $orders = Order::with(['customer', 'items.product', 'items.priceTier'])
+            ->where('order_type', 'pesan_antar')
+            ->whereIn('delivery_status', [Order::STATUS_PENDING, Order::STATUS_DIANTAR])
+            ->orderByRaw("FIELD(delivery_status, 'diantar', 'pending')")
+            ->oldest()
+            ->get()
+            ->map(function ($order) {
+                $firstItem = $order->items->first();
+                return [
+                    'id' => $order->id,
+                    'order_number' => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
+                    'time' => $order->created_at->format('H:i'),
+                    'delivery_status' => $order->delivery_status,
+                    'payment_status' => $order->payment_status,
+                    'total_amount' => (float) $order->total_amount,
+                    'customer' => [
+                        'id' => $order->customer?->id,
+                        'name' => $order->customer?->name ?? 'Pelanggan Terdaftar',
+                        'whatsapp' => $order->customer?->whatsapp_number ?? '',
+                        'address' => $order->customer?->address ?? '-',
+                        'borrowed_gallons' => (int) ($order->customer?->borrowed_gallons ?? 0),
+                    ],
+                    'items_summary' => [
+                        'tier_name' => $firstItem?->priceTier?->name ?? 'Isi Ulang',
+                        'qty' => (int) ($firstItem?->quantity ?? 0),
+                        'gallon_action' => $firstItem?->gallon_action ?? 'tidak_ada',
+                        'gallon_qty' => (int) ($firstItem?->gallon_qty ?? 0),
+                    ],
+                ];
+            });
 
-// --- RUTE TERAUTENTIKASI UMUM (ADMIN & KASIR) ---
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+        $priceTiers = PriceTier::where('is_active', true)->orderBy('price')->get();
+        $tutupStock = Inventory::where('item_type', 'tutup_galon')->value('quantity') ?? 0;
+        $totalGalonDepot = Inventory::where('item_type', 'galon_kosong_depot')->value('quantity') ?? 0;
+
+        return view('courier.queue', compact('orders', 'priceTiers', 'tutupStock', 'totalGalonDepot'));
+    })->name('delivery.queue');
 
     // Endpoint Transaksi POS Kasir (S2-BE-01 & S2-BE-02)
     Route::prefix('pos/order')->name('pos.order.')->group(function () {
