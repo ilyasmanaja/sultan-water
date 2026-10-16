@@ -25,26 +25,21 @@ class OrderController extends Controller
         $userId = auth()->id();
 
         return DB::transaction(function () use ($validated, $inventoryService, $customerLoanService, $userId) {
-            // Hitung total tutup galon yang dibutuhkan (Qg)
             $totalRefillQty = collect($validated['items'])->sum('quantity');
 
-            // 1. Eksekusi lock inventaris pertama: Tutup Galon (BR-INV-02 §4.2)
-            // Jika retur murni ($totalRefillQty = 0), deductCap tidak memotong dan tidak membuat log audit
-            $inventoryService->deductCap($totalRefillQty, 0, $userId);
-
-            // 2. Tangani Quick Add jika ada pelanggan baru
+            // 1. Tangani Quick Add jika ada pelanggan baru
             $customerId = $validated['customer_id'] ?? null;
             if (!$customerId && !empty($validated['new_customer']['name'])) {
                 $newCust = Customer::create([
-                    'name'             => $validated['new_customer']['name'],
-                    'whatsapp_number'  => $validated['new_customer']['whatsapp_number'],
-                    'address'          => $validated['new_customer']['address'] ?? null,
+                    'name' => $validated['new_customer']['name'],
+                    'whatsapp_number' => $validated['new_customer']['whatsapp_number'],
+                    'address' => $validated['new_customer']['address'] ?? null,
                     'borrowed_gallons' => 0,
                 ]);
                 $customerId = $newCust->id;
             }
 
-            // 3. Kalkulasi Server-Side untuk items, subtotal, dan mutasi galon pinjaman
+            // 2. Kalkulasi Server-Side untuk items, subtotal, dan mutasi galon pinjaman
             $totalAmount = 0;
             $gPinjam = 0;
             $gKembali = 0;
@@ -58,7 +53,6 @@ class OrderController extends Controller
                 $action = $item['gallon_action'];
                 $tier = !empty($item['price_tier_id']) ? $priceTiers->get($item['price_tier_id']) : null;
 
-                // Retur galon murni: unit_price = 0, subtotal = 0, price_tier_id = null
                 $unitPrice = $qty > 0 && $tier ? (float) $tier->price : 0.00;
                 $subtotal = $qty * $unitPrice;
                 $totalAmount += $subtotal;
@@ -76,34 +70,38 @@ class OrderController extends Controller
                 }
 
                 $orderItemsData[] = [
-                    'product_id'    => $item['product_id'],
+                    'product_id' => $item['product_id'],
                     'price_tier_id' => $qty > 0 ? $item['price_tier_id'] : null,
-                    'quantity'      => $qty,
-                    'unit_price'    => $unitPrice,
-                    'subtotal'      => $subtotal,
+                    'quantity' => $qty,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
                     'gallon_action' => $action,
-                    'gallon_qty'    => $gallonQty,
+                    'gallon_qty' => $gallonQty,
                 ];
             }
 
-            // 4. Buat Header Order
+            // 3. Buat Header Order terlebih dahulu agar memiliki order_id sah
             $isWalkIn = $validated['order_type'] === 'ambil_sendiri';
             $order = Order::create([
-                'customer_id'     => $customerId,
-                'order_type'      => $validated['order_type'],
+                'customer_id' => $customerId,
+                'order_type' => $validated['order_type'],
                 'delivery_status' => $isWalkIn ? Order::STATUS_SELESAI : Order::STATUS_PENDING,
-                'payment_method'  => $validated['payment_method'],
-                'payment_status'  => $isWalkIn ? 'lunas' : 'belum_lunas',
-                'total_amount'    => $totalAmount,
-                'created_by'      => $userId,
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => $isWalkIn ? 'lunas' : 'belum_lunas',
+                'total_amount' => $totalAmount,
+                'created_by' => $userId,
             ]);
+
+            // 4. Potong Stok Tutup Galon dengan order_id yang valid
+            // Jika retur murni ($totalRefillQty = 0), deductCap tidak memotong dan tidak membuat log audit
+            $inventoryService->deductCap($totalRefillQty, $order->id, $userId);
 
             // 5. Simpan detail item pesanan
             foreach ($orderItemsData as $itemData) {
                 $order->items()->create($itemData);
             }
 
-            // 6. Mutasi Pinjaman Galon Pelanggan via CustomerLoanService (Locking urutan ke-3)
+            // 6. Mutasi Pinjaman Galon Pelanggan via CustomerLoanService
             if ($customerId && ($gPinjam > 0 || $gKembali > 0)) {
                 $customer = Customer::findOrFail($customerId);
                 $customerLoanService->apply($customer, $gPinjam, $gKembali);
@@ -112,11 +110,11 @@ class OrderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Transaksi isi ulang berhasil disimpan.',
-                'data'    => [
-                    'order_id'        => $order->id,
-                    'total_amount'    => $order->total_amount,
+                'data' => [
+                    'order_id' => $order->id,
+                    'total_amount' => $order->total_amount,
                     'delivery_status' => $order->delivery_status,
-                    'payment_status'  => $order->payment_status,
+                    'payment_status' => $order->payment_status,
                 ],
             ], 201);
         });
@@ -135,23 +133,19 @@ class OrderController extends Controller
         return DB::transaction(function () use ($validated, $inventoryService, $userId) {
             $totalNewGallonQty = collect($validated['items'])->sum('quantity');
 
-            // 1. Eksekusi lock inventaris: Tutup Galon lalu Galon Kosong Depot (G_total)
-            $inventoryService->deductCap($totalNewGallonQty, 0, $userId);
-            $inventoryService->deductFleetTotal($totalNewGallonQty, 0, $userId);
-
-            // 2. Tangani Quick Add jika ada customer baru
+            // 1. Tangani Quick Add jika ada customer baru
             $customerId = $validated['customer_id'] ?? null;
             if (!$customerId && !empty($validated['new_customer']['name'])) {
                 $newCust = Customer::create([
-                    'name'             => $validated['new_customer']['name'],
-                    'whatsapp_number'  => $validated['new_customer']['whatsapp_number'],
-                    'address'          => $validated['new_customer']['address'] ?? null,
+                    'name' => $validated['new_customer']['name'],
+                    'whatsapp_number' => $validated['new_customer']['whatsapp_number'],
+                    'address' => $validated['new_customer']['address'] ?? null,
                     'borrowed_gallons' => 0,
                 ]);
                 $customerId = $newCust->id;
             }
 
-            // 3. Kalkulasi Server-Side untuk Galon Baru
+            // 2. Kalkulasi Server-Side untuk Galon Baru
             $totalAmount = 0;
             $orderItemsData = [];
 
@@ -166,27 +160,31 @@ class OrderController extends Controller
                 $totalAmount += $subtotal;
 
                 $orderItemsData[] = [
-                    'product_id'    => $item['product_id'],
+                    'product_id' => $item['product_id'],
                     'price_tier_id' => $item['price_tier_id'],
-                    'quantity'      => $qty,
-                    'unit_price'    => $unitPrice,
-                    'subtotal'      => $subtotal,
+                    'quantity' => $qty,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
                     'gallon_action' => 'tidak_ada',
-                    'gallon_qty'    => 0,
+                    'gallon_qty' => 0,
                 ];
             }
 
-            // 4. Buat Header Order
+            // 3. Buat Header Order terlebih dahulu
             $isWalkIn = $validated['order_type'] === 'ambil_sendiri';
             $order = Order::create([
-                'customer_id'     => $customerId,
-                'order_type'      => $validated['order_type'],
+                'customer_id' => $customerId,
+                'order_type' => $validated['order_type'],
                 'delivery_status' => $isWalkIn ? Order::STATUS_SELESAI : Order::STATUS_PENDING,
-                'payment_method'  => $validated['payment_method'],
-                'payment_status'  => $isWalkIn ? 'lunas' : 'belum_lunas',
-                'total_amount'    => $totalAmount,
-                'created_by'      => $userId,
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => $isWalkIn ? 'lunas' : 'belum_lunas',
+                'total_amount' => $totalAmount,
+                'created_by' => $userId,
             ]);
+
+            // 4. Eksekusi pemotongan Tutup Galon dan Galon Kosong Depot (G_total) dengan order_id yang sah
+            $inventoryService->deductCap($totalNewGallonQty, $order->id, $userId);
+            $inventoryService->deductFleetTotal($totalNewGallonQty, $order->id, $userId);
 
             // 5. Simpan detail item pesanan
             foreach ($orderItemsData as $itemData) {
@@ -196,11 +194,11 @@ class OrderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Transaksi galon baru berhasil disimpan.',
-                'data'    => [
-                    'order_id'        => $order->id,
-                    'total_amount'    => $order->total_amount,
+                'data' => [
+                    'order_id' => $order->id,
+                    'total_amount' => $order->total_amount,
                     'delivery_status' => $order->delivery_status,
-                    'payment_status'  => $order->payment_status,
+                    'payment_status' => $order->payment_status,
                 ],
             ], 201);
         });
