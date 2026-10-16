@@ -8,7 +8,8 @@ use App\Models\Order;
 use App\Models\Customer;
 use App\Models\Inventory;
 use App\Http\Controllers\PriceTierController;
-
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DeliveryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,22 +65,22 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
             ->map(function ($order) {
                 $firstItem = $order->items->first();
                 return [
-                    'id'               => $order->id,
-                    'order_number'     => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
-                    'time'             => $order->created_at->format('H:i'),
-                    'order_type'       => $order->order_type,
-                    'delivery_status'  => $order->delivery_status,
-                    'payment_status'   => $order->payment_status,
-                    'customer_name'    => $order->customer->name ?? 'Pelanggan Umum',
+                    'id' => $order->id,
+                    'order_number' => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
+                    'time' => $order->created_at->format('H:i'),
+                    'order_type' => $order->order_type,
+                    'delivery_status' => $order->delivery_status,
+                    'payment_status' => $order->payment_status,
+                    'customer_name' => $order->customer->name ?? 'Pelanggan Umum',
                     'customer_address' => $order->customer->address ?? '-',
-                    'tier_name'        => $firstItem?->priceTier?->name ?? 'Isi Ulang',
-                    'tier_code'        => $firstItem?->priceTier?->code ?? 'letak_kedai',
-                    'product_type'     => $firstItem?->product?->type ?? 'isi_ulang',
-                    'qty'              => (int) ($firstItem?->quantity ?? 1),
-                    'total_amount'     => (float) $order->total_amount,
-                    'gallon_action'    => $firstItem?->gallon_action ?? 'tidak_ada',
-                    'gallon_qty'       => (int) ($firstItem?->gallon_qty ?? 0),
-                    'payment_method'   => $order->payment_method,
+                    'tier_name' => $firstItem?->priceTier?->name ?? 'Isi Ulang',
+                    'tier_code' => $firstItem?->priceTier?->code ?? 'letak_kedai',
+                    'product_type' => $firstItem?->product?->type ?? 'isi_ulang',
+                    'qty' => (int) ($firstItem?->quantity ?? 1),
+                    'total_amount' => (float) $order->total_amount,
+                    'gallon_action' => $firstItem?->gallon_action ?? 'tidak_ada',
+                    'gallon_qty' => (int) ($firstItem?->gallon_qty ?? 0),
+                    'payment_method' => $order->payment_method,
                 ];
             });
 
@@ -103,5 +104,18 @@ Route::middleware('auth')->group(function () {
     Route::prefix('pos/order')->name('pos.order.')->group(function () {
         Route::post('/refill', [OrderController::class, 'storeRefill'])->name('refill');
         Route::post('/new-gallon', [OrderController::class, 'storeNewGallon'])->name('new-gallon');
+    });
+
+    // Endpoint Kurir Pengantaran & Rollback Pembatalan (S3-BE-02)
+    Route::prefix('delivery')->name('delivery.')->group(function () {
+        Route::post('/{order}/start', [DeliveryController::class, 'start'])->name('start');
+        Route::post('/{order}/complete', [DeliveryController::class, 'confirmComplete'])->name('complete');
+        Route::post('/{order}/cancel', [DeliveryController::class, 'cancel'])->name('cancel');
+    });
+
+    // Endpoint Smart Search & Quick Add Pelanggan (S3-BE-05 & S3-BE-06)
+    Route::prefix('customers')->name('customers.')->group(function () {
+        Route::get('/search', [CustomerController::class, 'search'])->name('search');
+        Route::post('/quick-add', [CustomerController::class, 'quickStore'])->name('quick-store');
     });
 });
