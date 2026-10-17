@@ -240,4 +240,51 @@ class InventoryService
         }
     }
 
+
+    /**
+     * Memeriksa status ketersediaan tutup galon dan mendeteksi kondisi low-stock (S4-BE-06 / Tiket #76).
+     * Alert aktif jika quantity <= low_stock_threshold.
+     */
+    public function getCapStockStatus(): array
+    {
+        $capInventory = Inventory::where('item_type', self::ITEM_CAP)->firstOrFail();
+
+        $threshold = (int) ($capInventory->low_stock_threshold ?? 600);
+        $currentStock = (int) $capInventory->quantity;
+        $isLowStock = $currentStock <= $threshold;
+
+        return [
+            'item_type'           => self::ITEM_CAP,
+            'current_stock'       => $currentStock,
+            'low_stock_threshold' => $threshold,
+            'is_low_stock'        => $isLowStock,
+            'message'             => $isLowStock
+                ? "Peringatan: Stok tutup galon tersisa {$currentStock} unit (di bawah atau sama dengan batas minimum {$threshold}). Segera lakukan restock!"
+                : "Stok tutup galon aman ({$currentStock} unit).",
+        ];
+    }
+
+    /**
+     * Memperbarui batas minimum (threshold) low-stock tutup galon oleh Admin (S4-BE-06 / Tiket #76).
+     * Validasi: bilangan bulat minimal 1.
+     */
+    public function updateThreshold(int $newThreshold): Inventory
+    {
+        if ($newThreshold < 1) {
+            throw ValidationException::withMessages([
+                'low_stock_threshold' => ['Ambang batas minimum harus berupa bilangan bulat minimal 1.'],
+            ]);
+        }
+
+        return DB::transaction(function () use ($newThreshold) {
+            $capInventory = Inventory::where('item_type', self::ITEM_CAP)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $capInventory->low_stock_threshold = $newThreshold;
+            $capInventory->save();
+
+            return $capInventory;
+        });
+    }
 }

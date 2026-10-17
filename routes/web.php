@@ -11,6 +11,10 @@ use App\Models\PriceTier;
 use App\Http\Controllers\PriceTierController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportExportController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +44,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/restock', [InventoryController::class, 'showRestockForm'])->name('restock');
         Route::post('/restock/cap', [InventoryController::class, 'restockCap'])->name('restock.cap');
         Route::post('/restock/gallon', [InventoryController::class, 'restockGallon'])->name('restock.gallon');
+        Route::put('/threshold', [InventoryController::class, 'updateThreshold'])->name('threshold.update');
     });
 
     // Endpoint CRUD Master Tier Harga (S3-BE-09 & S3-FE-07)
@@ -58,6 +63,24 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::put('/{priceTier}', [PriceTierController::class, 'update'])->name('update');
     });
 
+    // Modul Pengeluaran Operasional (Expenses - S4-FE-03 / Tiket #63)
+    Route::prefix('admin/expenses')->name('admin.expenses.')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index'])->name('index');
+        Route::post('/', [ExpenseController::class, 'store'])->name('store');
+        Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
+    });
+
+    // Modul Laporan Finansial & Agregasi Laba Bersih (S4-BE-03 / Tiket #58)
+    Route::prefix('admin/reports')->name('admin.reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/summary', [ReportController::class, 'summary'])->name('summary');
+    });
+
+    // Fitur Cetak & Ekspor Laporan Keuangan (S4-BE-04 / Tiket #59)
+    Route::prefix('admin/reports/export')->name('admin.reports.export.')->group(function () {
+        Route::get('/pdf', [ReportExportController::class, 'exportPdf'])->name('pdf');
+        Route::get('/excel', [ReportExportController::class, 'exportExcel'])->name('excel');
+    });
 });
 
 // --- RUTE TERAUTENTIKASI UMUM (BISA DIAKSES ADMIN & KASIR) ---
@@ -163,9 +186,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/{order}/cancel', [DeliveryController::class, 'cancel'])->name('cancel');
     });
 
-    // Endpoint Smart Search & Quick Add Pelanggan (S3-BE-05 & S3-BE-06)
+    // Endpoint Smart Search, Quick Add & Riwayat Pembelian Pelanggan (S3-BE-05, S3-BE-06 & S4-BE-07)
     Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('/search', [CustomerController::class, 'search'])->name('search');
         Route::post('/quick-add', [CustomerController::class, 'quickStore'])->name('quick-store');
+        Route::get('/{customer}/monthly-purchases', [CustomerController::class, 'monthlyPurchaseHistory'])->name('monthly-purchases');
     });
+
+    // Endpoint Status Stok & Low-Stock Alert Tutup Galon (S4-BE-06 / Tiket #76)
+    Route::get('/inventory/status/cap', [InventoryController::class, 'capStatus'])->name('inventory.cap-status');
 });
