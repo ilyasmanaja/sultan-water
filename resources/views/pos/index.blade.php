@@ -172,7 +172,7 @@
                                             'text-purple-600 font-semibold': order.gallon_action === 'kembalikan',
                                             'text-slate-400': order.gallon_action === 'tidak_ada'
                                         }"
-                                        x-text="formatGallonAction(order.gallon_action, order.qty, order.tier_code)"></span>
+                                        x-text="formatGallonAction(order.gallon_action, order.gallon_qty, order.tier_code)"></span>
                                 </div>
                             </td>
                             <td class="py-3.5 px-4 text-right font-black text-slate-900"
@@ -199,10 +199,12 @@
 
 @section('modals')
     <!-- ========================================================================= -->
-    <!-- MODAL FORM: TRANSAKSI BARU (5-TIER HARGA + LOGIKA GALON)                  -->
+    <!-- MODAL FORM: TRANSAKSI BARU (5-TIER HARGA + LOGIKA GALON + RETUR MURNI)    -->
     <!-- ========================================================================= -->
     <div x-show="openOrderModal" x-cloak
         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+
+        <!-- Boks Kontainer Kartu Putih Dialog -->
         <div class="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 overflow-y-auto max-h-[92vh] touch-scroll"
             @click.away="openOrderModal = false">
 
@@ -210,7 +212,7 @@
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                     <h3 class="text-base sm:text-lg font-black text-slate-900">Transaksi Kasir Baru</h3>
-                    <p class="text-xs text-slate-400">Pilih tier harga dan opsi galon fisik</p>
+                    <p class="text-xs text-slate-400">Pilih mode transaksi, tier harga, atau retur galon</p>
                 </div>
                 <button type="button" @click="openOrderModal = false"
                     class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs cursor-pointer">
@@ -218,11 +220,25 @@
                 </button>
             </div>
 
+            <!-- Saklar Mode: Penjualan Air vs Retur Galon Murni -->
+            <div class="mt-3 grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+                <button type="button" @click="setSalesMode()"
+                    :class="!isPureReturn ? 'bg-white text-slate-900 font-black shadow-xs' : 'text-slate-500 font-bold'"
+                    class="py-2 text-xs rounded-xl transition cursor-pointer">
+                    Isi Ulang / Beli Air
+                </button>
+                <button type="button" @click="setPureReturnMode()"
+                    :class="isPureReturn ? 'bg-purple-600 text-white font-black shadow-xs' : 'text-slate-500 font-bold'"
+                    class="py-2 text-xs rounded-xl transition cursor-pointer">
+                    Retur Galon Murni
+                </button>
+            </div>
+
             <!-- Modal Form Body -->
             <div class="mt-4 space-y-4">
 
-                <!-- 1. Tipe Layanan (Walk-in vs Antar) -->
-                <div>
+                <!-- 1. Tipe Layanan (Hanya tampil jika bukan Retur Murni) -->
+                <div x-show="!isPureReturn">
                     <label class="block text-xs font-bold text-slate-600 mb-1.5">Tipe Layanan</label>
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" @click="newOrder.orderType = 'ambil_sendiri'"
@@ -245,7 +261,11 @@
                 <!-- 2. Pilih Pelanggan -->
                 <div>
                     <div class="flex items-center justify-between mb-1">
-                        <label class="text-xs font-bold text-slate-600">Pelanggan</label>
+                        <label class="text-xs font-bold text-slate-600">
+                            Pelanggan <span
+                                x-show="isPureReturn || ['pinjam', 'kembalikan'].includes(newOrder.gallonAction)"
+                                class="text-rose-500">*</span>
+                        </label>
                         <button type="button" @click="openQuickAddModal = true"
                             class="text-xs font-extrabold text-blue-600 hover:underline cursor-pointer">
                             + Tambah Baru
@@ -273,153 +293,193 @@
                     </template>
                 </div>
 
-                <!-- 3. PILIHAN 5-TIER HARGA -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1.5">Pilih Varian Produk & Tier Harga</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <template x-for="tier in priceTiers" :key="tier.id">
-                            <button type="button" @click="selectTier(tier)"
-                                :class="{
-                                    'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600': newOrder.priceTierId ===
-                                        tier.id && tier.applies_to === 'isi_ulang',
-                                    'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600': newOrder
-                                        .priceTierId === tier.id && tier.applies_to === 'galon_baru',
-                                    'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200': newOrder
-                                        .priceTierId !== tier.id && tier.applies_to === 'isi_ulang',
-                                    'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100': newOrder
-                                        .priceTierId !== tier.id && tier.applies_to === 'galon_baru',
-                                    'col-span-2 sm:col-span-2': tier.applies_to === 'galon_baru'
-                                }"
-                                class="p-2.5 rounded-2xl text-left transition flex flex-col justify-between min-h-[58px] active:scale-95 cursor-pointer">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[11px] font-medium" x-text="tier.name"></span>
-                                    <span x-show="tier.applies_to === 'galon_baru'"
-                                        class="text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase bg-emerald-200 text-emerald-800"
-                                        :class="newOrder.priceTierId === tier.id ? 'bg-white/20 text-white' : ''">Beli
-                                        Putus</span>
+                <!-- JIKA MODE ISI ULANG / PENJUALAN BIASA -->
+                <template x-if="!isPureReturn">
+                    <div class="space-y-4">
+                        <!-- 3. PILIHAN 5-TIER HARGA -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5">Pilih Varian Produk & Tier
+                                Harga</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <template x-for="tier in priceTiers" :key="tier.id">
+                                    <button type="button" @click="selectTier(tier)"
+                                        :class="{
+                                            'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600': newOrder
+                                                .priceTierId ===
+                                                tier.id && tier.applies_to === 'isi_ulang',
+                                            'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600': newOrder
+                                                .priceTierId === tier.id && tier.applies_to === 'galon_baru',
+                                            'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200': newOrder
+                                                .priceTierId !== tier.id && tier.applies_to === 'isi_ulang',
+                                            'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100': newOrder
+                                                .priceTierId !== tier.id && tier.applies_to === 'galon_baru',
+                                            'col-span-2 sm:col-span-2': tier.applies_to === 'galon_baru'
+                                        }"
+                                        class="p-2.5 rounded-2xl text-left transition flex flex-col justify-between min-h-[58px] active:scale-95 cursor-pointer">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-medium" x-text="tier.name"></span>
+                                            <span x-show="tier.applies_to === 'galon_baru'"
+                                                class="text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase bg-emerald-200 text-emerald-800"
+                                                :class="newOrder.priceTierId === tier.id ? 'bg-white/20 text-white' : ''">Beli
+                                                Putus</span>
+                                        </div>
+                                        <span class="text-sm font-black" x-text="rupiah(tier.price)"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- 4. OPSI GALON FISIK -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5">
+                                Opsi Galon Fisik Pelanggan
+                                <span x-show="newOrder.tierCode === 'galon_baru_isi'"
+                                    class="text-slate-400 font-normal">(Terkunci: Beli Putus)</span>
+                            </label>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
+                                    @click="selectGallonAction('tukar_seimbang')"
+                                    :class="newOrder.gallonAction === 'tukar_seimbang' ?
+                                        'bg-emerald-50 border-emerald-500 text-emerald-900 font-black ring-1 ring-emerald-500' :
+                                        'bg-slate-50 border-slate-200 text-slate-600'"
+                                    class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
+                                    <i class="fa-solid fa-arrows-rotate text-emerald-600"></i>
+                                    <span>Tukar 1:1</span>
+                                </button>
+
+                                <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
+                                    @click="selectGallonAction('pinjam')"
+                                    :class="newOrder.gallonAction === 'pinjam' ?
+                                        'bg-amber-50 border-amber-500 text-amber-900 font-black ring-1 ring-amber-500' :
+                                        'bg-slate-50 border-slate-200 text-slate-600'"
+                                    class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
+                                    <i class="fa-solid fa-hand-holding text-amber-600"></i>
+                                    <span>Pinjam (+Gp)</span>
+                                </button>
+
+                                <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
+                                    @click="selectGallonAction('kembalikan')"
+                                    :class="newOrder.gallonAction === 'kembalikan' ?
+                                        'bg-purple-50 border-purple-500 text-purple-900 font-black ring-1 ring-purple-500' :
+                                        'bg-slate-50 border-slate-200 text-slate-600'"
+                                    class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
+                                    <i class="fa-solid fa-rotate-left text-purple-600"></i>
+                                    <span>Kembali (-Gp)</span>
+                                </button>
+
+                                <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
+                                    @click="selectGallonAction('tidak_ada')"
+                                    :class="newOrder.gallonAction === 'tidak_ada' ?
+                                        'bg-slate-200 border-slate-400 text-slate-900 font-black' :
+                                        'bg-slate-50 border-slate-200 text-slate-600'"
+                                    class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-90 cursor-pointer">
+                                    <i class="fa-solid"
+                                        :class="newOrder.tierCode === 'galon_baru_isi' ? 'fa-bag-shopping text-emerald-700' :
+                                            'fa-minus text-slate-500'"></i>
+                                    <span
+                                        x-text="newOrder.tierCode === 'galon_baru_isi' ? 'Beli Putus' : 'Bawa Sendiri'"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 5. KUANTITAS ITEM & JUMLAH PENGEMBALIAN BERSAMAAN -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Jumlah Galon (Order)</label>
+                                <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+                                    <button type="button" @click="updateQuantity(-1)"
+                                        class="w-10 h-10 rounded-xl bg-white text-slate-800 flex items-center justify-center font-black text-sm shadow-xs active:bg-slate-200 cursor-pointer">
+                                        <i class="fa-solid fa-minus"></i>
+                                    </button>
+                                    <input type="number" min="1" x-model.number="newOrder.quantity"
+                                        @change="updateQuantity(0)"
+                                        class="w-full text-center font-black text-base text-slate-900 bg-transparent border-none focus:outline-none focus:ring-0 p-0">
+                                    <button type="button" @click="updateQuantity(1)"
+                                        class="w-10 h-10 rounded-xl bg-white text-slate-800 flex items-center justify-center font-black text-sm shadow-xs active:bg-slate-200 cursor-pointer">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
                                 </div>
-                                <span class="text-sm font-black" x-text="rupiah(tier.price)"></span>
-                            </button>
-                        </template>
-                    </div>
-                </div>
+                            </div>
 
-                <!-- 4. OPSI GALON FISIK -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1.5">
-                        Opsi Galon Fisik Pelanggan
-                        <span x-show="newOrder.tierCode === 'galon_baru_isi'"
-                            class="text-slate-400 font-normal">(Terkunci: Beli Putus)</span>
-                    </label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
-                            @click="selectGallonAction('tukar_seimbang')"
-                            :class="newOrder.gallonAction === 'tukar_seimbang' ?
-                                'bg-emerald-50 border-emerald-500 text-emerald-900 font-black ring-1 ring-emerald-500' :
-                                'bg-slate-50 border-slate-200 text-slate-600'"
-                            class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
-                            <i class="fa-solid fa-arrows-rotate text-emerald-600"></i>
-                            <span>Tukar 1:1</span>
-                        </button>
+                            <!-- Input Jumlah Pengembalian jika gallonAction === 'kembalikan' -->
+                            <div x-show="newOrder.gallonAction === 'kembalikan'">
+                                <label class="block text-xs font-bold text-purple-800 mb-1">Jml Galon Dikembalikan</label>
+                                <div class="flex items-center gap-2 bg-purple-50 border border-purple-200 p-1 rounded-2xl">
+                                    <button type="button" @click="if (newOrder.gallonQty > 1) newOrder.gallonQty--"
+                                        class="w-10 h-10 rounded-xl bg-white text-purple-800 flex items-center justify-center font-black text-sm shadow-xs cursor-pointer">
+                                        <i class="fa-solid fa-minus"></i>
+                                    </button>
+                                    <input type="number" min="1"
+                                        :max="selectedCustomer ? selectedCustomer.borrowed_gallons : 1"
+                                        x-model.number="newOrder.gallonQty"
+                                        class="w-full text-center font-black text-base text-purple-900 bg-transparent border-none focus:outline-none focus:ring-0 p-0">
+                                    <button type="button"
+                                        @click="if (!selectedCustomer || newOrder.gallonQty < selectedCustomer.borrowed_gallons) newOrder.gallonQty++"
+                                        class="w-10 h-10 rounded-xl bg-white text-purple-800 flex items-center justify-center font-black text-sm shadow-xs cursor-pointer">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-                        <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
-                            @click="selectGallonAction('pinjam')"
-                            :class="newOrder.gallonAction === 'pinjam' ?
-                                'bg-amber-50 border-amber-500 text-amber-900 font-black ring-1 ring-amber-500' :
-                                'bg-slate-50 border-slate-200 text-slate-600'"
-                            class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
-                            <i class="fa-solid fa-hand-holding text-amber-600"></i>
-                            <span>Pinjam (+Gp)</span>
-                        </button>
-
-                        <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
-                            @click="selectGallonAction('kembalikan')"
-                            :class="newOrder.gallonAction === 'kembalikan' ?
-                                'bg-purple-50 border-purple-500 text-purple-900 font-black ring-1 ring-purple-500' :
-                                'bg-slate-50 border-slate-200 text-slate-600'"
-                            class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
-                            <i class="fa-solid fa-rotate-left text-purple-600"></i>
-                            <span>Kembali (-Gp)</span>
-                        </button>
-
-                        <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
-                            @click="selectGallonAction('tidak_ada')"
-                            :class="newOrder.gallonAction === 'tidak_ada' ?
-                                'bg-slate-200 border-slate-400 text-slate-900 font-black' :
-                                'bg-slate-50 border-slate-200 text-slate-600'"
-                            class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-90 cursor-pointer">
-                            <i class="fa-solid"
-                                :class="newOrder.tierCode === 'galon_baru_isi' ? 'fa-bag-shopping text-emerald-700' :
-                                    'fa-minus text-slate-500'"></i>
-                            <span x-text="newOrder.tierCode === 'galon_baru_isi' ? 'Beli Putus' : 'Bawa Sendiri'"></span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 5. KUANTITAS ITEM & RETURN CONTROL -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Jumlah Galon (Order)</label>
-                        <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
-                            <button type="button" @click="updateQuantity(-1)"
-                                class="w-10 h-10 rounded-xl bg-white text-slate-800 flex items-center justify-center font-black text-sm shadow-xs active:bg-slate-200 cursor-pointer">
-                                <i class="fa-solid fa-minus"></i>
-                            </button>
-                            <input type="number" min="1" x-model.number="newOrder.quantity"
-                                @change="updateQuantity(0)"
-                                class="w-full text-center font-black text-base text-slate-900 bg-transparent border-none focus:outline-none focus:ring-0 p-0">
-                            <button type="button" @click="updateQuantity(1)"
-                                class="w-10 h-10 rounded-xl bg-white text-slate-800 flex items-center justify-center font-black text-sm shadow-xs active:bg-slate-200 cursor-pointer">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
+                        <!-- 6. INDIKATOR STATUS PEMBAYARAN -->
+                        <div class="pt-3 border-t border-slate-100">
+                            <div
+                                class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-700 block">Metode: Tunai</span>
+                                    <span class="text-[11px] text-slate-400">Status pembayaran otomatis disesuaikan
+                                        layanan</span>
+                                </div>
+                                <div>
+                                    <span x-show="newOrder.orderType === 'ambil_sendiri'"
+                                        class="px-3 py-1 rounded-xl text-xs font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-check text-[10px]"></i>
+                                        <span>Lunas</span>
+                                    </span>
+                                    <span x-show="newOrder.orderType === 'pesan_antar'"
+                                        class="px-3 py-1 rounded-xl text-xs font-black uppercase bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5 animate-pulse">
+                                        <i class="fa-solid fa-clock text-[10px]"></i>
+                                        <span>Belum Lunas (COD)</span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </template>
 
-                    <!-- Khusus Input Retur Galon jika gallonAction === 'kembalikan' -->
-                    <div x-show="newOrder.gallonAction === 'kembalikan'">
-                        <label class="block text-xs font-bold text-purple-800 mb-1">Jml Galon Dikembalikan</label>
-                        <div class="flex items-center gap-2 bg-purple-50 border border-purple-200 p-1 rounded-2xl">
-                            <button type="button" @click="if (newOrder.gallonQty > 1) newOrder.gallonQty--"
-                                class="w-10 h-10 rounded-xl bg-white text-purple-800 flex items-center justify-center font-black text-sm shadow-xs cursor-pointer">
+                <!-- JIKA MODE RETUR GALON MURNI (TANPA TRANSAKSI BELI AIR) -->
+                <template x-if="isPureReturn">
+                    <div class="space-y-3 p-4 bg-purple-50/70 rounded-2xl border border-purple-200">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-purple-900">Jumlah Galon Fisik Dikembalikan</span>
+                            <span class="text-[11px] font-semibold text-purple-700"
+                                x-text="'Maksimal: ' + (selectedCustomer ? selectedCustomer.borrowed_gallons : 0) + ' Unit'"></span>
+                        </div>
+
+                        <div class="flex items-center gap-2 bg-white p-1 rounded-2xl border border-purple-200">
+                            <button type="button" @click="if (pureReturnQty > 1) pureReturnQty--"
+                                class="w-11 h-11 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center font-black text-sm active:bg-purple-200 cursor-pointer">
                                 <i class="fa-solid fa-minus"></i>
                             </button>
                             <input type="number" min="1"
                                 :max="selectedCustomer ? selectedCustomer.borrowed_gallons : 1"
-                                x-model.number="newOrder.gallonQty"
-                                class="w-full text-center font-black text-base text-purple-900 bg-transparent border-none focus:outline-none focus:ring-0 p-0">
+                                x-model.number="pureReturnQty"
+                                class="w-full text-center font-black text-base text-purple-950 bg-transparent border-none focus:outline-none focus:ring-0 p-0">
                             <button type="button"
-                                @click="if (!selectedCustomer || newOrder.gallonQty < selectedCustomer.borrowed_gallons) newOrder.gallonQty++"
-                                class="w-10 h-10 rounded-xl bg-white text-purple-800 flex items-center justify-center font-black text-sm shadow-xs cursor-pointer">
+                                @click="if (!selectedCustomer || pureReturnQty < selectedCustomer.borrowed_gallons) pureReturnQty++"
+                                class="w-11 h-11 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center font-black text-sm active:bg-purple-200 cursor-pointer">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
                         </div>
-                    </div>
-                </div>
 
-                <!-- 6. INDIKATOR STATUS PEMBAYARAN -->
-                <div class="pt-3 border-t border-slate-100">
-                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-bold text-slate-700 block">Metode: Tunai</span>
-                            <span class="text-[11px] text-slate-400">Status pembayaran otomatis disesuaikan layanan</span>
-                        </div>
-                        <div>
-                            <!-- Badge Status Walk-in (Lunas) -->
-                            <span x-show="newOrder.orderType === 'ambil_sendiri'"
-                                class="px-3 py-1 rounded-xl text-xs font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
-                                <i class="fa-solid fa-check text-[10px]"></i>
-                                <span>Lunas</span>
-                            </span>
-
-                            <!-- Badge Status Pesan Antar (Belum Lunas / COD) -->
-                            <span x-show="newOrder.orderType === 'pesan_antar'"
-                                class="px-3 py-1 rounded-xl text-xs font-black uppercase bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5 animate-pulse">
-                                <i class="fa-solid fa-clock text-[10px]"></i>
-                                <span>Belum Lunas (COD)</span>
-                            </span>
-                        </div>
+                        <p class="text-[11px] text-purple-800 font-medium leading-relaxed">
+                            <i class="fa-solid fa-circle-info mr-1"></i>
+                            Retur murni mengurangi saldo galon pinjaman pelanggan (Gp) tanpa memotong stok tutup dan tagihan
+                            adalah Rp0.
+                        </p>
                     </div>
-                </div>
+                </template>
 
                 <!-- Validasi Error Banner -->
                 <div x-show="formValidationError"
@@ -437,7 +497,8 @@
 
                     <button type="button" @click="processNewOrder()" :disabled="formValidationError || isSubmitting"
                         class="min-h-[46px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-98 disabled:opacity-40 disabled:pointer-events-none text-white font-black text-xs sm:text-sm rounded-2xl shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer">
-                        <span x-text="isSubmitting ? 'Memproses...' : 'Simpan Transaksi'"></span>
+                        <span
+                            x-text="isSubmitting ? 'Memproses...' : (isPureReturn ? 'Simpan Retur Galon' : 'Simpan Transaksi')"></span>
                         <i class="fa-solid fa-check text-xs"></i>
                     </button>
                 </div>
@@ -542,7 +603,7 @@
                         <div class="text-right">
                             <span class="font-bold text-slate-800" x-text="lastOrder.qty + ' Galon'"></span>
                             <div class="text-[10px] text-blue-600 font-semibold"
-                                x-text="formatGallonAction(lastOrder.gallon_action, lastOrder.gallon_qty, lastOrder.tier_code)">
+                                x-text="formatGallonAction(order.gallon_action, order.gallon_qty, order.tier_code)">
                             </div>
                         </div>
                     </div>
@@ -592,14 +653,12 @@
         function posApp(initialOrders = [], initialCustomers = [], initialPriceTiers = [], initialTutupStock = 1000,
             initialGalonStock = 50) {
             return {
-                // ... state metadata ...
                 todayDate: '',
                 tutupStock: initialTutupStock,
                 totalGalonDepot: initialGalonStock,
                 searchQuery: '',
                 statusFilter: 'all',
 
-                // Ambil data priceTiers langsung dari database
                 priceTiers: initialPriceTiers,
 
                 products: {
@@ -615,13 +674,16 @@
                     }
                 },
 
-                // ... modal & feedback states ...
                 openOrderModal: false,
                 openQuickAddModal: false,
                 openReceiptModal: false,
                 isSubmitting: false,
                 showToast: false,
                 toastMessage: '',
+
+                // Mode Retur Murni
+                isPureReturn: false,
+                pureReturnQty: 1,
 
                 newOrder: {
                     orderType: 'ambil_sendiri',
@@ -636,10 +698,8 @@
                     paymentMethod: 'tunai',
                 },
 
-                // --- State Data Transaksi Terakhir untuk Struk ---
                 lastOrder: null,
 
-                // --- Quick Add Customer State ---
                 newCustomer: {
                     name: '',
                     whatsapp: '',
@@ -668,11 +728,31 @@
                 },
 
                 get totalAmount() {
+                    if (this.isPureReturn) return 0;
                     return (this.newOrder.unitPrice || 0) * (this.newOrder.quantity || 1);
                 },
 
-                // Validasi Frontend DOC-VAL-POS-02 v1.3
+                setSalesMode() {
+                    this.isPureReturn = false;
+                    this.newOrder.gallonAction = 'tukar_seimbang';
+                    this.newOrder.quantity = 1;
+                    this.newOrder.gallonQty = 1;
+                },
+
+                setPureReturnMode() {
+                    this.isPureReturn = true;
+                    this.pureReturnQty = 1;
+                },
+
+                // Validasi Frontend DOC-VAL-POS-02 v1.4
                 get formValidationError() {
+                    if (this.isPureReturn) {
+                        if (!this.newOrder.customerId) return true;
+                        if (!this.selectedCustomer || this.selectedCustomer.borrowed_gallons <= 0) return true;
+                        if (this.pureReturnQty > this.selectedCustomer.borrowed_gallons) return true;
+                        return false;
+                    }
+
                     const o = this.newOrder;
                     if (o.orderType === 'pesan_antar' && !o.customerId) return true;
                     if ((o.gallonAction === 'pinjam' || o.gallonAction === 'kembalikan') && !o.customerId) return true;
@@ -683,6 +763,19 @@
                 },
 
                 get formValidationMessage() {
+                    if (this.isPureReturn) {
+                        if (!this.newOrder.customerId) {
+                            return 'Pelanggan terdaftar wajib dipilih untuk pengembalian galon!';
+                        }
+                        if (!this.selectedCustomer || this.selectedCustomer.borrowed_gallons <= 0) {
+                            return 'Pelanggan ini tidak memiliki saldo pinjaman galon.';
+                        }
+                        if (this.pureReturnQty > this.selectedCustomer.borrowed_gallons) {
+                            return `Jumlah retur (${this.pureReturnQty}) melebihi galon yang sedang dipinjam (${this.selectedCustomer.borrowed_gallons} unit).`;
+                        }
+                        return '';
+                    }
+
                     const o = this.newOrder;
                     if (o.orderType === 'pesan_antar' && !o.customerId) {
                         return 'Pelanggan wajib dipilih untuk layanan Pesan Antar!';
@@ -734,7 +827,7 @@
                     if (nextQty < 1) nextQty = 1;
                     this.newOrder.quantity = nextQty;
 
-                    if (this.newOrder.gallonAction === 'tukar_seimbang') {
+                    if (this.newOrder.gallonAction === 'tukar_seimbang' || this.newOrder.gallonAction === 'pinjam') {
                         this.newOrder.gallonQty = nextQty;
                     } else if (this.newOrder.gallonAction === 'kembalikan' && this.selectedCustomer) {
                         if (this.newOrder.gallonQty > this.selectedCustomer.borrowed_gallons) {
@@ -747,9 +840,7 @@
                     if (this.newOrder.tierCode === 'galon_baru_isi') return;
                     this.newOrder.gallonAction = action;
 
-                    if (action === 'tukar_seimbang') {
-                        this.newOrder.gallonQty = this.newOrder.quantity;
-                    } else if (action === 'pinjam') {
+                    if (action === 'tukar_seimbang' || action === 'pinjam') {
                         this.newOrder.gallonQty = this.newOrder.quantity;
                     } else if (action === 'kembalikan') {
                         const maxReturn = this.selectedCustomer ? this.selectedCustomer.borrowed_gallons : 1;
@@ -759,15 +850,15 @@
                     }
                 },
 
-                formatGallonAction(action, qty, tierCode) {
+                formatGallonAction(action, gallonQty, tierCode) {
                     if (tierCode === 'galon_baru_isi') return '• Beli Putus';
                     switch (action) {
                         case 'tukar_seimbang':
                             return '• Tukar 1:1';
                         case 'pinjam':
-                            return `• Pinjam (+${qty} Gp)`;
+                            return `• Pinjam (+${gallonQty} Gp)`;
                         case 'kembalikan':
-                            return `• Kembali (-${qty} Gp)`;
+                            return `• Kembali (-${gallonQty} Gp)`;
                         default:
                             return '• Bawa Sendiri';
                     }
@@ -777,22 +868,35 @@
                     if (this.formValidationError || this.isSubmitting) return;
                     this.isSubmitting = true;
 
-                    const isNewGallon = this.newOrder.tierCode === 'galon_baru_isi';
+                    const isNewGallon = !this.isPureReturn && (this.newOrder.tierCode === 'galon_baru_isi');
                     const endpoint = isNewGallon ? '{{ route('pos.order.new-gallon') }}' :
                         '{{ route('pos.order.refill') }}';
 
-                    const payload = {
-                        order_type: this.newOrder.orderType,
-                        customer_id: this.newOrder.customerId || null,
-                        payment_method: this.newOrder.paymentMethod,
-                        items: [{
+                    // Siapkan item transaksi sesuai mode
+                    let itemsPayload = [];
+                    if (this.isPureReturn) {
+                        itemsPayload = [{
+                            product_id: this.products.refill.id,
+                            price_tier_id: null,
+                            quantity: 0,
+                            gallon_action: 'kembalikan',
+                            gallon_qty: this.pureReturnQty
+                        }];
+                    } else {
+                        itemsPayload = [{
                             product_id: this.newOrder.productId,
                             price_tier_id: this.newOrder.priceTierId,
                             quantity: this.newOrder.quantity,
                             gallon_action: this.newOrder.gallonAction,
-                            gallon_qty: this.newOrder.gallonAction === 'tidak_ada' ? 0 : this.newOrder
-                                .gallonQty
-                        }]
+                            gallon_qty: this.newOrder.gallonAction === 'tidak_ada' ? 0 : this.newOrder.gallonQty
+                        }];
+                    }
+
+                    const payload = {
+                        order_type: this.isPureReturn ? 'ambil_sendiri' : this.newOrder.orderType,
+                        customer_id: this.newOrder.customerId || null,
+                        payment_method: this.newOrder.paymentMethod,
+                        items: itemsPayload
                     };
 
                     try {
@@ -813,13 +917,18 @@
                             throw new Error(result.message || 'Gagal menyimpan transaksi.');
                         }
 
-                        this.tutupStock -= this.newOrder.quantity;
-                        if (isNewGallon) this.totalGalonDepot -= this.newOrder.quantity;
+                        // Mutasi lokal
+                        if (!this.isPureReturn) {
+                            this.tutupStock -= this.newOrder.quantity;
+                            if (isNewGallon) this.totalGalonDepot -= this.newOrder.quantity;
+                        }
 
                         let customerName = 'Pelanggan Umum';
                         if (this.selectedCustomer) {
                             customerName = this.selectedCustomer.name;
-                            if (this.newOrder.gallonAction === 'pinjam') {
+                            if (this.isPureReturn) {
+                                this.selectedCustomer.borrowed_gallons -= this.pureReturnQty;
+                            } else if (this.newOrder.gallonAction === 'pinjam') {
                                 this.selectedCustomer.borrowed_gallons += this.newOrder.gallonQty;
                             } else if (this.newOrder.gallonAction === 'kembalikan') {
                                 this.selectedCustomer.borrowed_gallons -= this.newOrder.gallonQty;
@@ -827,26 +936,31 @@
                         }
 
                         const now = new Date();
-                        const calculatedPaymentStatus = this.newOrder.orderType === 'ambil_sendiri' ? 'lunas' :
-                            'belum_lunas';
+                        const tierInfo = this.isPureReturn ? {
+                            name: 'Retur Galon Murni',
+                            code: '-'
+                        } : (this.priceTiers.find(t => t.id === this.newOrder.priceTierId) || {
+                            name: 'Isi Ulang',
+                            code: 'letak_kedai'
+                        });
 
                         const orderData = {
                             id: result.data.order_id,
                             order_number: 'SW-' + String(result.data.order_id).padStart(5, '0'),
                             time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(
                                 2, '0'),
-                            order_type: this.newOrder.orderType,
+                            order_type: payload.order_type,
                             delivery_status: result.data.delivery_status,
-                            payment_status: calculatedPaymentStatus,
+                            payment_status: 'lunas',
                             customer_name: customerName,
                             customer_address: this.selectedCustomer ? (this.selectedCustomer.address || '-') : '-',
-                            tier_name: this.priceTiers.find(t => t.id === this.newOrder.priceTierId).name,
-                            tier_code: this.newOrder.tierCode,
-                            qty: this.newOrder.quantity,
-                            unit_price: this.newOrder.unitPrice,
+                            tier_name: tierInfo.name,
+                            tier_code: tierInfo.code,
+                            qty: this.isPureReturn ? 0 : this.newOrder.quantity,
+                            unit_price: this.isPureReturn ? 0 : this.newOrder.unitPrice,
                             total_amount: this.totalAmount,
-                            gallon_action: this.newOrder.gallonAction,
-                            gallon_qty: this.newOrder.gallonQty,
+                            gallon_action: this.isPureReturn ? 'kembalikan' : this.newOrder.gallonAction,
+                            gallon_qty: this.isPureReturn ? this.pureReturnQty : this.newOrder.gallonQty,
                             payment_method: this.newOrder.paymentMethod
                         };
 
@@ -854,8 +968,11 @@
                         this.lastOrder = orderData;
 
                         this.openOrderModal = false;
-                        this.openReceiptModal = true;
-                        this.triggerToast('Transaksi berhasil disimpan!');
+                        if (!this.isPureReturn) {
+                            this.openReceiptModal = true;
+                        }
+                        this.triggerToast(this.isPureReturn ? 'Retur galon berhasil dicatat!' :
+                            'Transaksi berhasil disimpan!');
                         this.resetForm();
                     } catch (err) {
                         alert('Kesalahan Transaksi: ' + err.message);
@@ -865,33 +982,75 @@
                 },
 
                 resetForm() {
+                    this.isPureReturn = false;
+                    this.pureReturnQty = 1;
                     this.newOrder.quantity = 1;
+                    this.newOrder.gallonQty = 1;
                     this.newOrder.customerId = '';
                     this.newOrder.orderType = 'ambil_sendiri';
                     this.newOrder.paymentMethod = 'tunai';
+                    this.newOrder.gallonAction = 'tukar_seimbang';
                     const defaultTier = this.priceTiers.find(t => t.code === 'letak_kedai');
                     if (defaultTier) this.selectTier(defaultTier);
                 },
 
-                saveQuickCustomer() {
+                async saveQuickCustomer() {
                     if (!this.newCustomer.name || !this.newCustomer.whatsapp) return;
-                    const newId = Date.now();
-                    const cust = {
-                        id: newId,
-                        name: this.newCustomer.name,
-                        whatsapp: this.newCustomer.whatsapp,
-                        address: this.newCustomer.address?.trim() || '-',
-                        borrowed_gallons: 0
-                    };
-                    this.customers.push(cust);
-                    this.newOrder.customerId = newId;
-                    this.openQuickAddModal = false;
-                    this.newCustomer = {
-                        name: '',
-                        whatsapp: '',
-                        address: ''
-                    };
-                    this.triggerToast('Pelanggan ' + cust.name + ' berhasil ditambahkan!');
+
+                    try {
+                        const response = await fetch('{{ route('customers.quick-store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                    'content')
+                            },
+                            body: JSON.stringify({
+                                name: this.newCustomer.name,
+                                whatsapp_number: this.newCustomer.whatsapp,
+                                address: this.newCustomer.address ? this.newCustomer.address.trim() :
+                                    null
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (!response.ok) {
+                            if (result.errors) {
+                                const firstErrorKey = Object.keys(result.errors)[0];
+                                throw new Error(result.errors[firstErrorKey][0]);
+                            }
+                            throw new Error(result.message || 'Gagal menyimpan pelanggan baru.');
+                        }
+
+                        const savedCustomer = result.data;
+
+                        const existingIndex = this.customers.findIndex(c => c.id === savedCustomer.id);
+                        if (existingIndex !== -1) {
+                            this.customers[existingIndex] = savedCustomer;
+                        } else {
+                            this.customers.push({
+                                id: savedCustomer.id,
+                                name: savedCustomer.name,
+                                whatsapp: savedCustomer.whatsapp_number,
+                                address: savedCustomer.address || '-',
+                                borrowed_gallons: savedCustomer.borrowed_gallons || 0
+                            });
+                        }
+
+                        this.newOrder.customerId = savedCustomer.id;
+                        this.openQuickAddModal = false;
+                        this.newCustomer = {
+                            name: '',
+                            whatsapp: '',
+                            address: ''
+                        };
+
+                        this.triggerToast(result.message || 'Pelanggan berhasil ditambahkan!');
+                    } catch (err) {
+                        alert('Kesalahan Tambah Pelanggan: ' + err.message);
+                    }
                 },
 
                 triggerToast(msg) {
