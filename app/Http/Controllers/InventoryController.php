@@ -105,4 +105,49 @@ class InventoryController extends Controller
             ->with('success_gallon', $message)
             ->with('latest_fleet_total', $updatedFleet->quantity);
     }
+
+    /**
+     * Endpoint JSON status stok tutup galon & low-stock alert untuk dikonsumsi frontend (Kasir POS & Admin).
+     * GET /inventory/status/cap
+     */
+    public function capStatus(): JsonResponse
+    {
+        $status = $this->inventoryService->getCapStockStatus();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $status,
+        ], 200);
+    }
+
+    /**
+     * Endpoint pembaruan nilai ambang batas low_stock_threshold oleh Admin.
+     * PUT /inventory/threshold
+     */
+    public function updateThreshold(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'low_stock_threshold' => ['required', 'integer', 'min:1'],
+        ], [
+            'low_stock_threshold.required' => 'Ambang batas minimum wajib diisi.',
+            'low_stock_threshold.integer'  => 'Ambang batas minimum harus berupa bilangan bulat.',
+            'low_stock_threshold.min'      => 'Ambang batas minimum harus minimal 1 unit.',
+        ]);
+
+        $updatedCap = $this->inventoryService->updateThreshold((int) $validated['low_stock_threshold']);
+
+        $message = "Batas minimum peringatan stok tutup galon berhasil diperbarui menjadi {$updatedCap->low_stock_threshold} unit.";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success'             => true,
+                'message'             => $message,
+                'low_stock_threshold' => $updatedCap->low_stock_threshold,
+            ], 200);
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', $message);
+    }
 }

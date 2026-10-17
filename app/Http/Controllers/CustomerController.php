@@ -29,7 +29,7 @@ class CustomerController extends Controller
             ->select('id', 'name', 'whatsapp_number', 'address', 'borrowed_gallons')
             ->where(function ($q) use ($escapedQuery) {
                 $q->where('name', 'LIKE', "%{$escapedQuery}%")
-                  ->orWhere('whatsapp_number', 'LIKE', "%{$escapedQuery}%");
+                    ->orWhere('whatsapp_number', 'LIKE', "%{$escapedQuery}%");
             })
             ->orderBy('name', 'asc')
             ->limit(10)
@@ -103,5 +103,88 @@ class CustomerController extends Controller
                 'borrowed_gallons' => 0,
             ],
         ], 201);
+    }
+
+    /**
+     * S4-BE-07 (Tiket #79): Agregasi Riwayat Pembelian Bulanan per Pelanggan.
+     * GET /customers/{customer}/monthly-purchases?month=8&year=2026
+     */
+    public function monthlyPurchaseHistory(Request $request, Customer $customer): JsonResponse
+    {
+        $validated = $request->validate([
+            'month' => ['nullable', 'integer', 'between:1,12'],
+            'year'  => ['nullable', 'integer', 'min:2020', 'max:2099'],
+        ]);
+
+        $month = (int) ($validated['month'] ?? now()->month);
+        $year  = (int) ($validated['year'] ?? now()->year);
+
+        // Ambil transaksi selesai pelanggan pada bulan & tahun terpilih
+        $orders = $customer->orders()
+            ->with(['items.product', 'items.priceTier'])
+            ->where('delivery_status', \App\Models\Order::STATUS_SELESAI)
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->latest('created_at')
+            ->get();
+
+        $totalGallons = 0;
+        $totalSpent = 0.0;
+        $orderHistory = [];
+
+        foreach ($orders as $order) {
+            $totalSpent += (float) $order->total_amount;
+            $orderGallonQty = 0;
+            $itemsDetail = [];
+
+            foreach ($order->items as $item) {
+                $qty = (int) $item->quantity;
+                $orderGallonQty += $qty;
+
+                $itemsDetail[] = [
+                    'product_name'  => $item->product?->name ?? 'Air Minum',
+                    'tier_name'     => $item->priceTier?->name ?? 'Isi Ulang',
+                    'tier_code'     => $item->priceTier?->code ?? '-',
+                    'quantity'      => $qty,
+                    'unit_price'    => (float) $item->unit_price,
+                    'subtotal'      => (float) $item->subtotal,
+                    'gallon_action' => $item->gallon_action,
+                    'gallon_qty'    => (int) $item->gallon_qty,
+                ];
+            }
+
+            $totalGallons += $orderGallonQty;
+
+            $orderHistory[] = [
+                'order_id'       => $order->id,
+                'order_number'   => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
+                'order_type'     => $order->order_type,
+                'payment_method' => $order->payment_method,
+                'total_amount'   => (float) $order->total_amount,
+                'gallons'        => $orderGallonQty,
+                'created_at'     => $order->created_at->format('Y-m-d H:i'),
+                'items'          => $itemsDetail,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'customer' => [
+                    'id'               => $customer->id,
+                    'name'             => $customer->name,
+                    'whatsapp_number'  => $customer->whatsapp_number,
+                    'borrowed_gallons' => (int) $customer->borrowed_gallons,
+                ],
+                'period' => [
+                    'month' => $month,
+                    'year'  => $year,
+                ],
+                'total_gallons' => $totalGallons,
+                'total_spent'   => $totalSpent,
+                'orders_count'  => count($orderHistory),
+                'orders'        => $orderHistory,
+            ],
+        ], 200);
     }
 }
