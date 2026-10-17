@@ -14,6 +14,7 @@ use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\DashboardController;
 
 
 /*
@@ -35,9 +36,7 @@ Route::middleware('guest')->group(function () {
 // --- RUTE KHUSUS ADMIN ---
 Route::middleware(['auth', 'role:admin'])->group(function () {
 
-    Route::get('/admin/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Modul Restock Tutup Galon & Pembelian Galon Baru (S2-BE-05 & S2-FE-05)
     Route::prefix('inventory')->name('inventory.')->group(function () {
