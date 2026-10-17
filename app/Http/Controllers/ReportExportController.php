@@ -14,7 +14,8 @@ class ReportExportController extends Controller
 {
     public function __construct(
         protected ReportService $reportService
-    ) {}
+    ) {
+    }
 
     /**
      * Ekspor Laporan Keuangan ke format PDF resmi.
@@ -27,7 +28,7 @@ class ReportExportController extends Controller
         // Validasi format tanggal
         $validated = $request->validate([
             'start_date' => ['nullable', 'date'],
-            'end_date'   => ['nullable', 'date', 'after_or_equal:start_date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $summary = $this->reportService->getFinancialSummary($startDate, $endDate);
@@ -40,10 +41,10 @@ class ReportExportController extends Controller
 
         // Render view PDF menggunakan DomPDF
         $pdf = Pdf::loadView('reports.pdf', [
-            'summary'   => $summary,
-            'expenses'  => $expenses,
+            'summary' => $summary,
+            'expenses' => $expenses,
             'startDate' => $startDate,
-            'endDate'   => $endDate,
+            'endDate' => $endDate,
             'printedAt' => Carbon::now()->translatedFormat('d F Y H:i'),
         ])->setPaper('a4', 'portrait');
 
@@ -82,11 +83,11 @@ class ReportExportController extends Controller
         $filename = "Laporan-Keuangan-Sultan-Water_{$startDate}_sd_{$endDate}.csv";
 
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Pragma'              => 'no-cache',
-            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires'             => '0',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
         ];
 
         return response()->stream(function () use ($summary, $orders, $expenses, $startDate, $endDate) {
@@ -162,5 +163,48 @@ class ReportExportController extends Controller
 
             fclose($handle);
         }, 200, $headers);
+    }
+
+    /**
+     * Menampilkan layout laporan keuangan ramah cetak (print-friendly) ukuran A4.
+     * S4-FE-04 (Tiket #64)
+     */
+    public function printView(Request $request)
+    {
+        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+
+        $request->validate([
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+        ]);
+
+        $summary = $this->reportService->getFinancialSummary($startDate, $endDate);
+
+        $startDateTime = Carbon::parse($startDate)->startOfDay();
+        $endDateTime = Carbon::parse($endDate)->endOfDay();
+
+        // Ambil transaksi penjualan lunas non-batal
+        $orders = Order::with('customer')
+            ->where('payment_status', 'lunas')
+            ->where('delivery_status', '!=', Order::STATUS_BATAL)
+            ->whereBetween('created_at', [$startDateTime, $endDateTime])
+            ->oldest()
+            ->get();
+
+        // Ambil pengeluaran operasional dalam periode
+        $expenses = Expense::with('createdBy')
+            ->whereBetween('expense_date', [$startDate, $endDate])
+            ->orderBy('expense_date', 'asc')
+            ->get();
+
+        return view('reports.print', [
+            'summary' => $summary,
+            'orders' => $orders,
+            'expenses' => $expenses,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'printedAt' => Carbon::now()->translatedFormat('d F Y H:i'),
+        ]);
     }
 }

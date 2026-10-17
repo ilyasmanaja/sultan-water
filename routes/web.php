@@ -36,6 +36,11 @@ Route::middleware('guest')->group(function () {
 // --- RUTE KHUSUS ADMIN ---
 Route::middleware(['auth', 'role:admin'])->group(function () {
 
+    // Direktori Pelanggan & Pemantauan Galon Pinjaman (Gp)
+    Route::prefix('admin/customers')->name('admin.customers.')->group(function () {
+        Route::get('/', [CustomerController::class, 'index'])->name('index');
+    });
+
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Modul Restock Tutup Galon & Pembelian Galon Baru (S2-BE-05 & S2-FE-05)
@@ -73,6 +78,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::prefix('admin/reports')->name('admin.reports.')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/summary', [ReportController::class, 'summary'])->name('summary');
+        // Tambahkan baris ini (Tiket #64):
+        Route::get('/print', [ReportExportController::class, 'printView'])->name('print');
     });
 
     // Fitur Cetak & Ekspor Laporan Keuangan (S4-BE-04 / Tiket #59)
@@ -101,6 +108,7 @@ Route::middleware('auth')->group(function () {
                 $firstItem = $order->items->first();
                 return [
                     'id' => $order->id,
+                    'customer_id' => $order->customer_id, // <-- TAMBAHKAN BARIS INI
                     'order_number' => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
                     'time' => $order->created_at->format('H:i'),
                     'order_type' => $order->order_type,
@@ -190,6 +198,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/search', [CustomerController::class, 'search'])->name('search');
         Route::post('/quick-add', [CustomerController::class, 'quickStore'])->name('quick-store');
         Route::get('/{customer}/monthly-purchases', [CustomerController::class, 'monthlyPurchaseHistory'])->name('monthly-purchases');
+        // Tambahkan rute halaman detail pelanggan ini:
+        Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
     });
 
     // Endpoint Status Stok & Low-Stock Alert Tutup Galon (S4-BE-06 / Tiket #76)
