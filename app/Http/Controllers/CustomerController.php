@@ -45,21 +45,21 @@ class CustomerController extends Controller
     public function quickStore(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name'            => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'whatsapp_number' => ['required', 'regex:/^(08|628)[0-9]{8,13}$/'],
-            'address'         => ['nullable', 'string', 'min:5'],
+            'address' => ['nullable', 'string', 'min:5'],
         ], [
-            'name.required'            => 'Nama pelanggan baru wajib diisi.',
+            'name.required' => 'Nama pelanggan baru wajib diisi.',
             'whatsapp_number.required' => 'Nomor WhatsApp wajib diisi.',
-            'whatsapp_number.regex'    => 'Nomor WhatsApp tidak valid (minimal 10-15 digit angka).',
-            'address.min'              => 'Alamat pelanggan minimal 5 karakter.',
+            'whatsapp_number.regex' => 'Nomor WhatsApp tidak valid (minimal 10-15 digit angka).',
+            'address.min' => 'Alamat pelanggan minimal 5 karakter.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal.',
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -73,11 +73,11 @@ class CustomerController extends Controller
                 'success' => true,
                 'is_existing' => true,
                 'message' => 'Pelanggan dengan nomor WhatsApp ini sudah terdaftar.',
-                'data'    => [
-                    'id'               => $existingCustomer->id,
-                    'name'             => $existingCustomer->name,
-                    'whatsapp_number'  => $existingCustomer->whatsapp_number,
-                    'address'          => $existingCustomer->address,
+                'data' => [
+                    'id' => $existingCustomer->id,
+                    'name' => $existingCustomer->name,
+                    'whatsapp_number' => $existingCustomer->whatsapp_number,
+                    'address' => $existingCustomer->address,
                     'borrowed_gallons' => (int) $existingCustomer->borrowed_gallons,
                 ],
             ], 200);
@@ -85,21 +85,21 @@ class CustomerController extends Controller
 
         // Buat pelanggan baru
         $customer = Customer::create([
-            'name'             => $validated['name'],
-            'whatsapp_number'  => $validated['whatsapp_number'],
-            'address'          => $validated['address'] ?? null,
+            'name' => $validated['name'],
+            'whatsapp_number' => $validated['whatsapp_number'],
+            'address' => $validated['address'] ?? null,
             'borrowed_gallons' => 0,
         ]);
 
         return response()->json([
-            'success'     => true,
+            'success' => true,
             'is_existing' => false,
-            'message'     => 'Pelanggan baru berhasil ditambahkan.',
-            'data'        => [
-                'id'               => $customer->id,
-                'name'             => $customer->name,
-                'whatsapp_number'  => $customer->whatsapp_number,
-                'address'          => $customer->address,
+            'message' => 'Pelanggan baru berhasil ditambahkan.',
+            'data' => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'whatsapp_number' => $customer->whatsapp_number,
+                'address' => $customer->address,
                 'borrowed_gallons' => 0,
             ],
         ], 201);
@@ -113,11 +113,11 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'month' => ['nullable', 'integer', 'between:1,12'],
-            'year'  => ['nullable', 'integer', 'min:2020', 'max:2099'],
+            'year' => ['nullable', 'integer', 'min:2020', 'max:2099'],
         ]);
 
         $month = (int) ($validated['month'] ?? now()->month);
-        $year  = (int) ($validated['year'] ?? now()->year);
+        $year = (int) ($validated['year'] ?? now()->year);
 
         // Ambil transaksi selesai pelanggan pada bulan & tahun terpilih
         $orders = $customer->orders()
@@ -142,49 +142,107 @@ class CustomerController extends Controller
                 $orderGallonQty += $qty;
 
                 $itemsDetail[] = [
-                    'product_name'  => $item->product?->name ?? 'Air Minum',
-                    'tier_name'     => $item->priceTier?->name ?? 'Isi Ulang',
-                    'tier_code'     => $item->priceTier?->code ?? '-',
-                    'quantity'      => $qty,
-                    'unit_price'    => (float) $item->unit_price,
-                    'subtotal'      => (float) $item->subtotal,
+                    'product_name' => $item->product?->name ?? 'Air Minum',
+                    'tier_name' => $item->priceTier?->name ?? 'Isi Ulang',
+                    'tier_code' => $item->priceTier?->code ?? '-',
+                    'quantity' => $qty,
+                    'unit_price' => (float) $item->unit_price,
+                    'subtotal' => (float) $item->subtotal,
                     'gallon_action' => $item->gallon_action,
-                    'gallon_qty'    => (int) $item->gallon_qty,
+                    'gallon_qty' => (int) $item->gallon_qty,
                 ];
             }
 
             $totalGallons += $orderGallonQty;
 
             $orderHistory[] = [
-                'order_id'       => $order->id,
-                'order_number'   => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
-                'order_type'     => $order->order_type,
+                'order_id' => $order->id,
+                'order_number' => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
+                'order_type' => $order->order_type,
                 'payment_method' => $order->payment_method,
-                'total_amount'   => (float) $order->total_amount,
-                'gallons'        => $orderGallonQty,
-                'created_at'     => $order->created_at->format('Y-m-d H:i'),
-                'items'          => $itemsDetail,
+                'total_amount' => (float) $order->total_amount,
+                'gallons' => $orderGallonQty,
+                'created_at' => $order->created_at->format('Y-m-d H:i'),
+                'items' => $itemsDetail,
             ];
         }
 
         return response()->json([
             'success' => true,
-            'data'    => [
+            'data' => [
                 'customer' => [
-                    'id'               => $customer->id,
-                    'name'             => $customer->name,
-                    'whatsapp_number'  => $customer->whatsapp_number,
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'whatsapp_number' => $customer->whatsapp_number,
                     'borrowed_gallons' => (int) $customer->borrowed_gallons,
                 ],
                 'period' => [
                     'month' => $month,
-                    'year'  => $year,
+                    'year' => $year,
                 ],
                 'total_gallons' => $totalGallons,
-                'total_spent'   => $totalSpent,
-                'orders_count'  => count($orderHistory),
-                'orders'        => $orderHistory,
+                'total_spent' => $totalSpent,
+                'orders_count' => count($orderHistory),
+                'orders' => $orderHistory,
             ],
         ], 200);
+    }
+
+    /**
+     * Menampilkan halaman detail/profil pelanggan beserta riwayat transaksi.
+     */
+    public function show(\App\Models\Customer $customer): \Illuminate\View\View
+    {
+        return view('customers.show', compact('customer'));
+    }
+
+    /**
+     * Menampilkan direktori pelanggan dan pemantauan galon dipinjam (Gp).
+     * Mendukung filter pencarian, filter galon dipinjam, dan pengurutan.
+     */
+    public function index(Request $request): \Illuminate\View\View
+    {
+        $query = Customer::query();
+
+        // Pencarian berdasarkan nama atau no WhatsApp
+        if ($request->filled('q')) {
+            $searchTerm = addcslashes($request->string('q'), '%_');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('whatsapp_number', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
+        // Filter tab: 'borrowing' (hanya yang sedang pinjam > 0), 'all' (semua pelanggan)
+        $filter = $request->input('filter', 'borrowing');
+        if ($filter === 'borrowing') {
+            $query->where('borrowed_gallons', '>', 0);
+        }
+
+        // Pengurutan: default dari pinjaman terbanyak
+        $sort = $request->input('sort', 'borrowed_desc');
+        if ($sort === 'borrowed_desc') {
+            $query->orderBy('borrowed_gallons', 'desc')->orderBy('name', 'asc');
+        } elseif ($sort === 'name_asc') {
+            $query->orderBy('name', 'asc');
+        } else {
+            $query->latest();
+        }
+
+        // Statistik agregat pemantauan
+        $totalBorrowedActive = (int) Customer::sum('borrowed_gallons');
+        $borrowerCount = Customer::where('borrowed_gallons', '>', 0)->count();
+        $totalCustomers = Customer::count();
+
+        $customers = $query->paginate(15)->withQueryString();
+
+        return view('customers.index', compact(
+            'customers',
+            'totalBorrowedActive',
+            'borrowerCount',
+            'totalCustomers',
+            'filter',
+            'sort'
+        ));
     }
 }

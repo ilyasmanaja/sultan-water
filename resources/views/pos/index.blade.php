@@ -35,14 +35,6 @@
     </style>
 @endpush
 
-@section('nav-actions')
-    <!-- Tombol Shortcut Tambah Transaksi Cepat di Sidebar Navigasi -->
-    <button type="button" @click="openOrderModal = true" title="Tambah Transaksi Cepat (F2)"
-        class="w-11 h-11 rounded-2xl bg-slate-100 text-slate-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition active:scale-95 cursor-pointer">
-        <i class="fa-solid fa-plus text-base"></i>
-    </button>
-@endsection
-
 @section('page-title', 'Kasir Penjualan Sultan Water')
 
 @section('page-subtitle')
@@ -155,8 +147,19 @@
                                         x-text="order.delivery_status"></span>
                                 </div>
                             </td>
+                            <!-- SESUDAH: -->
                             <td class="py-3.5 px-4">
-                                <div class="font-bold text-slate-800" x-text="order.customer_name"></div>
+                                <template x-if="order.customer_id">
+                                    <a :href="'/customers/' + order.customer_id"
+                                        class="font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                                        title="Buka profil & riwayat pembelian">
+                                        <span x-text="order.customer_name"></span>
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-blue-400"></i>
+                                    </a>
+                                </template>
+                                <template x-if="!order.customer_id">
+                                    <div class="font-bold text-slate-800" x-text="order.customer_name"></div>
+                                </template>
                                 <div class="text-[11px] text-slate-400 truncate max-w-[140px]"
                                     x-text="order.customer_address"></div>
                             </td>
@@ -946,6 +949,7 @@
 
                         const orderData = {
                             id: result.data.order_id,
+                            customer_id: payload.customer_id, // <-- TAMBAHKAN BARIS INI
                             order_number: 'SW-' + String(result.data.order_id).padStart(5, '0'),
                             time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(
                                 2, '0'),
