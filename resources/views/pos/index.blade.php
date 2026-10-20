@@ -539,8 +539,9 @@
                         class="w-full min-h-[42px] px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Alamat Lengkap</label>
-                    <textarea x-model="newCustomer.address" rows="2" placeholder="Jl. Rajawali No. 12"
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Alamat Lengkap <span
+                            class="text-rose-500">*</span></label>
+                    <textarea x-model="newCustomer.address" rows="2" placeholder="Jl. Rajawali No. 12" required
                         class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800 resize-none"></textarea>
                 </div>
                 <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -955,7 +956,7 @@
                                 2, '0'),
                             order_type: payload.order_type,
                             delivery_status: result.data.delivery_status,
-                            payment_status: 'lunas',
+                            payment_status: result.data.payment_status,
                             customer_name: customerName,
                             customer_address: this.selectedCustomer ? (this.selectedCustomer.address || '-') : '-',
                             tier_name: tierInfo.name,
