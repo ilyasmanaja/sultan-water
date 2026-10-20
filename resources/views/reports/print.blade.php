@@ -308,7 +308,7 @@
                     <p class="text-slate-500 font-medium">Mengetahui & Menyetujui (Pemilik):</p>
                     <div class="h-20 flex items-end justify-center">
                         <span class="font-bold text-slate-900 underline uppercase tracking-wide">
-                            M. Raihan Ilyasman
+                            Khairul Umam
                         </span>
                     </div>
                     <p class="text-[11px] text-slate-400 mt-1">Owner Sultan Water</p>
