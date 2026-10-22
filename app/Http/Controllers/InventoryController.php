@@ -150,4 +150,22 @@ class InventoryController extends Controller
             ->back()
             ->with('success', $message);
     }
+
+    public function writeOffGallon(Request $request, InventoryService $inventoryService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'quantity'    => 'required|integer|min:1',
+            'reason'      => 'required|string|max:255',
+            'customer_id' => 'nullable|exists:customers,id',
+        ]);
+
+        $inventoryService->writeOffGallon(
+            (int) $validated['quantity'],
+            $validated['reason'],
+            (int) Auth::id(),
+            isset($validated['customer_id']) ? (int) $validated['customer_id'] : null
+        );
+
+        return redirect()->back()->with('success', "Berhasil mencatat {$validated['quantity']} galon rusak/afkir.");
+    }
 }

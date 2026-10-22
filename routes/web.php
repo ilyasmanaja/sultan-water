@@ -43,12 +43,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-    // Modul Restock Tutup Galon & Pembelian Galon Baru (S2-BE-05 & S2-FE-05)
+    // Modul Restock Tutup Galon, Pembelian Galon Baru & Afkir Galon (S2-BE-05 & S2-FE-05)
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/restock', [InventoryController::class, 'showRestockForm'])->name('restock');
         Route::post('/restock/cap', [InventoryController::class, 'restockCap'])->name('restock.cap');
         Route::post('/restock/gallon', [InventoryController::class, 'restockGallon'])->name('restock.gallon');
         Route::put('/threshold', [InventoryController::class, 'updateThreshold'])->name('threshold.update');
+        Route::post('/gallon/write-off', [InventoryController::class, 'writeOffGallon'])->name('gallon.write-off');
     });
 
     // Endpoint CRUD Master Tier Harga (S3-BE-09 & S3-FE-07)
@@ -99,16 +100,21 @@ Route::middleware('auth')->group(function () {
     })->name('pos.index');
 
     Route::get('/pos/dashboard', function () {
-        // 1. Ambil order hari ini beserta relasinya
+        // 1. Ambil order hari ini ATAU order aktif dari hari sebelumnya yang belum selesai
         $orders = Order::with(['customer', 'items.product', 'items.priceTier'])
-            ->whereDate('created_at', today())
+            ->where(function ($query) {
+                $query->whereDate('created_at', today())
+                    ->orWhere(function ($q) {
+                        $q->whereIn('delivery_status', [Order::STATUS_PENDING, Order::STATUS_DIANTAR]);
+                    });
+            })
             ->latest()
             ->get()
             ->map(function ($order) {
                 $firstItem = $order->items->first();
                 return [
                     'id' => $order->id,
-                    'customer_id' => $order->customer_id, // <-- TAMBAHKAN BARIS INI
+                    'customer_id' => $order->customer_id,
                     'order_number' => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
                     'time' => $order->created_at->format('H:i'),
                     'order_type' => $order->order_type,
@@ -198,7 +204,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/search', [CustomerController::class, 'search'])->name('search');
         Route::post('/quick-add', [CustomerController::class, 'quickStore'])->name('quick-store');
         Route::get('/{customer}/monthly-purchases', [CustomerController::class, 'monthlyPurchaseHistory'])->name('monthly-purchases');
-        // Tambahkan rute halaman detail pelanggan ini:
         Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
     });
 
