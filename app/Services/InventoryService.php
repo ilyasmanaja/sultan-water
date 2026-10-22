@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Inventory;
 use App\Models\InventoryLog;
+use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -285,6 +286,45 @@ class InventoryService
             $capInventory->save();
 
             return $capInventory;
+        });
+    }
+
+    public function writeOffGallon(int $quantity, string $reason, int $userId, ?int $customerId = null): void
+    {
+        DB::transaction(function () use ($quantity, $reason, $userId, $customerId) {
+            $inventory = Inventory::where('item_type', self::ITEM_FLEET_TOTAL)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($inventory->quantity < $quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => ["Stok galon depot tidak mencukupi untuk dihapus/diafkir (Tersedia: {$inventory->quantity})."],
+                ]);
+            }
+
+            // 1. Kurangi total galon milik depot (G_total)
+            $inventory->decrement('quantity', $quantity);
+
+            // 2. Jika galon rusak saat dipinjam pelanggan, kurangi juga saldo pinjamannya (Gp)
+            if ($customerId) {
+                $customer = Customer::findOrFail($customerId);
+                if ($customer->borrowed_gallons < $quantity) {
+                    throw ValidationException::withMessages([
+                        'quantity' => ["Jumlah galon rusak melebihi saldo galon yang dipinjam pelanggan ini."],
+                    ]);
+                }
+                $customer->decrement('borrowed_gallons', $quantity);
+            }
+
+            // 3. Catat di tabel InventoryLog yang sudah ada
+            InventoryLog::create([
+                'inventory_id'  => $inventory->id,
+                'change_amount' => -$quantity,
+                'current_stock' => $inventory->quantity,
+                'reason'        => 'afkir_rusak',
+                'order_id'      => null,
+                'created_by'    => $userId,
+            ]);
         });
     }
 }

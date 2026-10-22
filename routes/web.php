@@ -43,12 +43,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-    // Modul Restock Tutup Galon & Pembelian Galon Baru (S2-BE-05 & S2-FE-05)
+    // Modul Restock Tutup Galon, Pembelian Galon Baru & Afkir Galon (S2-BE-05 & S2-FE-05)
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/restock', [InventoryController::class, 'showRestockForm'])->name('restock');
         Route::post('/restock/cap', [InventoryController::class, 'restockCap'])->name('restock.cap');
         Route::post('/restock/gallon', [InventoryController::class, 'restockGallon'])->name('restock.gallon');
         Route::put('/threshold', [InventoryController::class, 'updateThreshold'])->name('threshold.update');
+        Route::post('/gallon/write-off', [InventoryController::class, 'writeOffGallon'])->name('gallon.write-off');
     });
 
     // Endpoint CRUD Master Tier Harga (S3-BE-09 & S3-FE-07)
@@ -203,7 +204,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/search', [CustomerController::class, 'search'])->name('search');
         Route::post('/quick-add', [CustomerController::class, 'quickStore'])->name('quick-store');
         Route::get('/{customer}/monthly-purchases', [CustomerController::class, 'monthlyPurchaseHistory'])->name('monthly-purchases');
-        // Tambahkan rute halaman detail pelanggan ini:
         Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
     });
 
