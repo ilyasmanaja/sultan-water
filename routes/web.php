@@ -99,16 +99,21 @@ Route::middleware('auth')->group(function () {
     })->name('pos.index');
 
     Route::get('/pos/dashboard', function () {
-        // 1. Ambil order hari ini beserta relasinya
+        // 1. Ambil order hari ini ATAU order aktif dari hari sebelumnya yang belum selesai
         $orders = Order::with(['customer', 'items.product', 'items.priceTier'])
-            ->whereDate('created_at', today())
+            ->where(function ($query) {
+                $query->whereDate('created_at', today())
+                    ->orWhere(function ($q) {
+                        $q->whereIn('delivery_status', [Order::STATUS_PENDING, Order::STATUS_DIANTAR]);
+                    });
+            })
             ->latest()
             ->get()
             ->map(function ($order) {
                 $firstItem = $order->items->first();
                 return [
                     'id' => $order->id,
-                    'customer_id' => $order->customer_id, // <-- TAMBAHKAN BARIS INI
+                    'customer_id' => $order->customer_id,
                     'order_number' => 'SW-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
                     'time' => $order->created_at->format('H:i'),
                     'order_type' => $order->order_type,
