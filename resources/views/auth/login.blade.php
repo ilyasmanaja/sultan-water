@@ -47,6 +47,7 @@
                         value="{{ old('username') }}"
                         required 
                         autofocus
+                        autocomplete="username"
                         placeholder="Masukkan username"
                         class="w-full pl-11 pr-4 py-3 bg-slate-50 border @error('username') border-red-500 @else border-slate-200 @enderror rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
                     >
@@ -70,6 +71,7 @@
                         id="password" 
                         name="password" 
                         required 
+                        autocomplete="current-password"
                         placeholder="••••••••"
                         class="w-full pl-11 pr-12 py-3 bg-slate-50 border @error('password') border-red-500 @else border-slate-200 @enderror rounded-xl text-sm text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100 transition duration-200"
                     >
@@ -86,10 +88,25 @@
                 @enderror
             </div>
 
+            <!-- Checkbox Ingat Saya (Remember Me) -->
+            <div class="flex items-center justify-between">
+                <label for="remember" class="flex items-center gap-2 cursor-pointer select-none">
+                    <input 
+                        type="checkbox" 
+                        id="remember" 
+                        name="remember" 
+                        value="1" 
+                        checked
+                        class="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                    >
+                    <span class="text-xs font-semibold text-slate-600">Ingat Saya di Perangkat Ini</span>
+                </label>
+            </div>
+
             <!-- Tombol Submit -->
             <button 
                 type="submit" 
-                class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/20 transition duration-200 flex items-center justify-center gap-2 text-sm mt-2"
+                class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/20 transition duration-200 flex items-center justify-center gap-2 text-sm mt-2 cursor-pointer"
             >
                 <span>Masuk ke Sistem</span>
                 <i class="fas fa-arrow-right text-xs"></i>
