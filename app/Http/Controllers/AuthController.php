@@ -9,7 +9,6 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-
     public function showLoginForm(): View
     {
         return view('auth.login');
@@ -20,14 +19,17 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validasi
+        // Validasi input
         $credentials = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        // Autentikasi
-        if (Auth::attempt($credentials)) {
+        // Ambil status checkbox Ingat Saya (boolean)
+        $remember = $request->boolean('remember');
+
+        // Autentikasi dengan remember token
+        if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
             if (Auth::user()->role === 'admin') {
