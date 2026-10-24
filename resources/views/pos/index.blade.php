@@ -209,7 +209,7 @@
 
         <!-- Boks Kontainer Kartu Putih Dialog -->
         <div class="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 overflow-y-auto max-h-[92vh] touch-scroll"
-            @click.away="openOrderModal = false">
+            @click.away="if (!openQuickAddModal) openOrderModal = false">
 
             <!-- Modal Header -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
