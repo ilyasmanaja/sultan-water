@@ -27,8 +27,8 @@ class DeliveryController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Pesanan berhasil diubah ke status Diantar.',
-                'data'    => [
-                    'order_id'        => $lockedOrder->id,
+                'data' => [
+                    'order_id' => $lockedOrder->id,
                     'delivery_status' => $lockedOrder->delivery_status,
                 ],
             ]);
@@ -40,25 +40,129 @@ class DeliveryController extends Controller
      * POST /delivery/{order}/complete
      * Transisi: diantar -> selesai (payment_status: lunas)
      */
-    public function confirmComplete(Order $order): JsonResponse
-    {
-        return DB::transaction(function () use ($order) {
-            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
+    public function confirmComplete(
+        \Illuminate\Http\Request $request,
+        Order $order,
+        InventoryService $inventoryService
+    ): JsonResponse {
+        $userId = auth()->id() ?? 1;
 
-            // Eksekusi transisi status ke 'selesai' (terminal)
+        return DB::transaction(function () use ($request, $order, $inventoryService, $userId) {
+            // 1. Lock order beserta item dan produknya
+            $lockedOrder = Order::with(['items.product', 'customer'])
+                ->where('id', $order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Validasi transisi status
+            if (!$lockedOrder->canTransitionTo(Order::STATUS_SELESAI)) {
+                throw ValidationException::withMessages([
+                    'delivery_status' => ["Pesanan tidak dapat diselesaikan dari status {$lockedOrder->delivery_status}."],
+                ]);
+            }
+
+            // Validasi input dari kurir
+            $validated = $request->validate([
+                'actual_quantity' => 'nullable|integer|min:1',
+                'gallon_action' => 'nullable|in:tukar_seimbang,pinjam,kembalikan,tidak_ada',
+                'gallon_qty' => 'nullable|integer|min:0',
+            ]);
+
+            if (in_array($validated['gallon_action'] ?? '', ['pinjam', 'kembalikan'], true) && !$lockedOrder->customer_id) {
+                throw ValidationException::withMessages([
+                    'gallon_action' => ['Opsi pinjam atau kembali galon hanya bisa dilakukan untuk pelanggan terdaftar.'],
+                ]);
+            }
+
+            // Ambil item utama (biasanya pesanan antar hanya memiliki 1 item galon)
+            $mainItem = $lockedOrder->items->first();
+
+            if ($mainItem && isset($validated['actual_quantity'])) {
+                $oldQty = (int) $mainItem->quantity;
+                $newQty = (int) $validated['actual_quantity'];
+                $deltaQty = $newQty - $oldQty;
+
+                // A. Penyesuaian Stok Tutup Galon berdasarkan selisih (delta)
+                if ($deltaQty > 0) {
+                    // Jika kurir membawa/mengisi lebih banyak galon, potong stok tutup tambahan
+                    $inventoryService->deductCap($deltaQty, $lockedOrder->id, $userId);
+                } elseif ($deltaQty < 0) {
+                    // Jika pelanggan membeli lebih sedikit dari estimasi awal kasir, kembalikan stok tutup
+                    $capInventory = \App\Models\Inventory::where('item_type', InventoryService::ITEM_CAP)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $refundQty = abs($deltaQty);
+                    $capInventory->quantity += $refundQty;
+                    $capInventory->save();
+
+                    \App\Models\InventoryLog::create([
+                        'inventory_id' => $capInventory->id,
+                        'change_amount' => $refundQty,
+                        'current_stock' => $capInventory->quantity,
+                        'reason' => 'penyesuaian_pengantaran',
+                        'order_id' => $lockedOrder->id,
+                        'created_by' => $userId,
+                    ]);
+                }
+
+                // B. Penyesuaian Saldo Pinjaman Galon Pelanggan (Gp)
+                if ($lockedOrder->customer_id) {
+                    $customer = \App\Models\Customer::where('id', $lockedOrder->customer_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    // 1) Netralkan efek lama dari pesanan kasir
+                    if ($mainItem->gallon_action === 'pinjam') {
+                        $customer->borrowed_gallons -= (int) $mainItem->gallon_qty;
+                    } elseif ($mainItem->gallon_action === 'kembalikan') {
+                        $customer->borrowed_gallons += (int) $mainItem->gallon_qty;
+                    }
+
+                    // 2) Terapkan aksi baru yang dipilih kurir di lapangan
+                    $newAction = $validated['gallon_action'] ?? $mainItem->gallon_action;
+                    $newGallonQty = isset($validated['gallon_qty']) ? (int) $validated['gallon_qty'] : $newQty;
+
+                    if ($newAction === 'pinjam') {
+                        $customer->borrowed_gallons += $newGallonQty;
+                    } elseif ($newAction === 'kembalikan') {
+                        if ($newGallonQty > $customer->borrowed_gallons) {
+                            throw ValidationException::withMessages([
+                                'gallon_qty' => ["Jumlah galon kembali ({$newGallonQty}) melebihi saldo pinjaman pelanggan ({$customer->borrowed_gallons} galon)."],
+                            ]);
+                        }
+                        $customer->borrowed_gallons -= $newGallonQty;
+                    }
+
+                    $customer->save();
+
+                    // Update data di item
+                    $mainItem->gallon_action = $newAction;
+                    $mainItem->gallon_qty = ($newAction === 'tidak_ada') ? 0 : $newGallonQty;
+                }
+
+                // C. Update kuantitas dan subtotal item
+                $mainItem->quantity = $newQty;
+                $mainItem->subtotal = $newQty * $mainItem->unit_price;
+                $mainItem->save();
+
+                // D. Hitung ulang total_amount pesanan
+                $lockedOrder->total_amount = $lockedOrder->items()->sum('subtotal');
+            }
+
+            // Eksekusi transisi status ke 'selesai' dan pelunasan COD
             $lockedOrder->transitionTo(Order::STATUS_SELESAI);
-
-            // Pelunasan otomatis untuk skema COD
             $lockedOrder->payment_status = 'lunas';
             $lockedOrder->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pengantaran pesanan telah selesai dan pembayaran telah dicatat lunas.',
-                'data'    => [
-                    'order_id'        => $lockedOrder->id,
+                'message' => 'Pengantaran selesai, kuantitas disesuaikan, dan pembayaran dicatat lunas.',
+                'data' => [
+                    'order_id' => $lockedOrder->id,
                     'delivery_status' => $lockedOrder->delivery_status,
-                    'payment_status'  => $lockedOrder->payment_status,
+                    'payment_status' => $lockedOrder->payment_status,
+                    'total_amount' => $lockedOrder->total_amount,
                 ],
             ]);
         });
@@ -117,10 +221,10 @@ class DeliveryController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Pesanan berhasil dibatalkan dan seluruh stok serta pinjaman telah di-rollback.',
-                'data'    => [
-                    'order_id'        => $lockedOrder->id,
+                'data' => [
+                    'order_id' => $lockedOrder->id,
                     'delivery_status' => $lockedOrder->delivery_status,
-                    'payment_status'  => $lockedOrder->payment_status,
+                    'payment_status' => $lockedOrder->payment_status,
                 ],
             ]);
         });

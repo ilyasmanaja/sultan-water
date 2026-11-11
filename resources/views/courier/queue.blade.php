@@ -224,46 +224,146 @@
         </div>
     </div>
 
-    <!-- MODAL KONFIRMASI PENGANTARAN SELESAI -->
+    <!-- MODAL KONFIRMASI PENGANTARAN SELESAI (DENGAN PENYESUAIAN DI LAPANGAN) -->
     <div x-show="orderToComplete" x-cloak
-        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
+        <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto touch-scroll"
             @click.away="orderToComplete = null">
 
-            <div
-                class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mx-auto mb-3">
-                <i class="fa-solid fa-money-bill-wave"></i>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div
+                        class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg border border-emerald-100">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-slate-900">Selesaikan Pengantaran</h3>
+                        <p class="text-xs text-slate-400">Sesuaikan galon riil di tempat pelanggan</p>
+                    </div>
+                </div>
+                <button type="button" @click="orderToComplete = null"
+                    class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
 
-            <h3 class="text-base font-black text-slate-900 text-center">Selesaikan Pengantaran?</h3>
-            <p class="text-xs text-slate-500 text-center mt-1">Pastikan air galon sudah diserahkan dan uang pembayaran
-                tunai telah diterima.</p>
-
             <template x-if="orderToComplete">
-                <div class="my-4 p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs space-y-1.5">
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">Pelanggan:</span>
-                        <span class="font-bold text-slate-800" x-text="orderToComplete.customer.name"></span>
+                <div class="mt-4 space-y-4">
+                    <!-- Info Pelanggan & Alamat -->
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-slate-800 text-sm" x-text="orderToComplete.customer.name"></span>
+                            <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-800"
+                                x-text="orderToComplete.items_summary.tier_name"></span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-1 truncate" x-text="orderToComplete.customer.address">
+                        </div>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-400">Tagihan COD:</span>
-                        <span class="font-black text-emerald-600 text-sm"
-                            x-text="rupiah(orderToComplete.total_amount)"></span>
+
+                    <!-- 1. PENGATUR JUMLAH GALON AKTUAL (STEPPER +/-) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Jumlah Galon Terisi (Riil di Lokasi)
+                        </label>
+                        <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
+                            <button type="button" @click="updateCompleteQty(-1)"
+                                class="w-12 h-12 rounded-xl bg-white text-slate-800 flex items-center justify-center font-black text-base shadow-xs active:bg-slate-200 cursor-pointer">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <input type="number" min="1" x-model.number="completeForm.quantity"
+                                @change="if(completeForm.quantity < 1) completeForm.quantity = 1; syncCompleteGallonQty();"
+                                class="w-full text-center font-black text-xl text-slate-900 bg-transparent border-none focus:outline-none focus:ring-0 p-0">
+                            <button type="button" @click="updateCompleteQty(1)"
+                                class="w-12 h-12 rounded-xl bg-white text-slate-800 flex items-center justify-center font-black text-base shadow-xs active:bg-slate-200 cursor-pointer">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. PILIHAN OPSI FISIK GALON -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Kondisi Fisik Galon Pelanggan
+                        </label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" @click="setCompleteAction('tukar_seimbang')"
+                                :class="completeForm.gallon_action === 'tukar_seimbang' ?
+                                    'bg-emerald-50 border-emerald-500 text-emerald-900 font-black ring-1 ring-emerald-500' :
+                                    'bg-slate-50 border-slate-200 text-slate-600'"
+                                class="p-2 rounded-2xl border text-xs flex flex-col items-center justify-center gap-1 min-h-[48px] cursor-pointer">
+                                <i class="fa-solid fa-arrows-rotate text-emerald-600"></i>
+                                <span>Tukar 1:1</span>
+                            </button>
+
+                            <button type="button" @click="setCompleteAction('pinjam')"
+                                :class="completeForm.gallon_action === 'pinjam' ?
+                                    'bg-amber-50 border-amber-500 text-amber-900 font-black ring-1 ring-amber-500' :
+                                    'bg-slate-50 border-slate-200 text-slate-600'"
+                                class="p-2 rounded-2xl border text-xs flex flex-col items-center justify-center gap-1 min-h-[48px] cursor-pointer">
+                                <i class="fa-solid fa-hand-holding text-amber-600"></i>
+                                <span>Pinjam (+Gp)</span>
+                            </button>
+
+                            <button type="button" @click="setCompleteAction('kembalikan')"
+                                :class="completeForm.gallon_action === 'kembalikan' ?
+                                    'bg-purple-50 border-purple-500 text-purple-900 font-black ring-1 ring-purple-500' :
+                                    'bg-slate-50 border-slate-200 text-slate-600'"
+                                class="p-2 rounded-2xl border text-xs flex flex-col items-center justify-center gap-1 min-h-[48px] cursor-pointer">
+                                <i class="fa-solid fa-rotate-left text-purple-600"></i>
+                                <span>Kembali (-Gp)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Input tambahan jika pelanggan mengembalikan galon pinjaman -->
+                    <div x-show="completeForm.gallon_action === 'kembalikan'"
+                        class="p-3 bg-purple-50 rounded-2xl border border-purple-200">
+                        <div class="flex justify-between items-center text-xs mb-1.5">
+                            <span class="font-bold text-purple-900">Jml Galon Dikembalikan:</span>
+                            <span class="text-[11px] text-purple-700 font-semibold"
+                                x-text="'Maks Pinjam: ' + (orderToComplete.customer.borrowed_gallons || 0) + ' Galon'"></span>
+                        </div>
+                        <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-purple-200">
+                            <button type="button" @click="if (completeForm.return_qty > 1) completeForm.return_qty--"
+                                class="w-10 h-10 rounded-lg bg-purple-100 text-purple-900 flex items-center justify-center font-black cursor-pointer">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <input type="number" min="1" :max="orderToComplete.customer.borrowed_gallons || 1"
+                                x-model.number="completeForm.return_qty"
+                                class="w-full text-center font-black text-base text-purple-950 bg-transparent border-none focus:outline-none p-0">
+                            <button type="button"
+                                @click="if (completeForm.return_qty < (orderToComplete.customer.borrowed_gallons || 1)) completeForm.return_qty++"
+                                class="w-10 h-10 rounded-lg bg-purple-100 text-purple-900 flex items-center justify-center font-black cursor-pointer">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Total Tagihan Tunai COD -->
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Tagihan Tunai</span>
+                            <span class="text-2xl font-black text-emerald-600"
+                                x-text="rupiah(calculatedCompleteTotal)"></span>
+                        </div>
+                        <span class="text-[11px] text-slate-400 font-semibold"
+                            x-text="completeForm.quantity + 'x @ ' + rupiah(completeForm.unit_price)"></span>
+                    </div>
+
+                    <!-- Tombol Aksi -->
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" @click="orderToComplete = null"
+                            class="h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700 transition cursor-pointer">
+                            Batal
+                        </button>
+                        <button type="button" @click="executeCompleteDelivery()" :disabled="isProcessing"
+                            class="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-black text-xs text-white transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer">
+                            <i class="fa-solid fa-check text-xs"></i>
+                            <span x-text="isProcessing ? 'Menyimpan...' : 'Sudah Diterima'"></span>
+                        </button>
                     </div>
                 </div>
             </template>
-
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                <button type="button" @click="orderToComplete = null"
-                    class="h-11 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700 transition cursor-pointer">
-                    Cek Lagi
-                </button>
-                <button type="button" @click="executeCompleteDelivery()" :disabled="isProcessing"
-                    class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-black text-xs text-white transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-check text-xs"></i>
-                    <span x-text="isProcessing ? 'Menyimpan...' : 'Sudah Diterima'"></span>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -677,6 +777,12 @@
                 actionError: '',
                 orderToCancel: null,
                 orderToComplete: null,
+                completeForm: {
+                    quantity: 1,
+                    unit_price: 5000,
+                    gallon_action: 'tukar_seimbang',
+                    return_qty: 1
+                },
 
                 // Quick Sale, Modal Konfirmasi & Toast State
                 openQuickSaleModal: false,
@@ -810,6 +916,43 @@
                 confirmComplete(order) {
                     this.orderToComplete = order;
                     this.actionError = '';
+
+                    const itemQty = Math.max(1, parseInt(order.items_summary?.qty) || 1);
+                    const unitPrice = order.items_summary?.unit_price ?
+                        Number(order.items_summary.unit_price) :
+                        (Number(order.total_amount) / itemQty || 5000);
+
+                    this.completeForm = {
+                        quantity: itemQty,
+                        unit_price: unitPrice,
+                        gallon_action: order.items_summary.gallon_action || 'tukar_seimbang',
+                        return_qty: order.items_summary.gallon_action === 'kembalikan' ? (order.items_summary
+                            .gallon_qty || 1) : 1
+                    };
+                },
+
+                updateCompleteQty(delta) {
+                    let next = (this.completeForm.quantity || 1) + delta;
+                    if (next < 1) next = 1;
+                    this.completeForm.quantity = next;
+                    this.syncCompleteGallonQty();
+                },
+
+                setCompleteAction(action) {
+                    this.completeForm.gallon_action = action;
+                    this.syncCompleteGallonQty();
+                },
+
+                syncCompleteGallonQty() {
+                    if (this.completeForm.gallon_action === 'kembalikan' && this.orderToComplete) {
+                        const maxBorrow = this.orderToComplete.customer?.borrowed_gallons || 0;
+                        if (this.completeForm.return_qty > maxBorrow) {
+                            this.completeForm.return_qty = maxBorrow;
+                        }
+                        if (this.completeForm.return_qty < 1 && maxBorrow > 0) {
+                            this.completeForm.return_qty = 1;
+                        }
+                    }
                 },
 
                 async executeCancel() {
@@ -947,6 +1090,10 @@
                     }
                 },
 
+                get calculatedCompleteTotal() {
+                    return (this.completeForm.quantity || 1) * (this.completeForm.unit_price || 0);
+                },
+
                 confirmQuickSale() {
                     this.formError = '';
 
@@ -999,6 +1146,13 @@
                     this.isProcessing = order.id;
                     this.actionError = '';
 
+                    const payload = {
+                        actual_quantity: this.completeForm.quantity,
+                        gallon_action: this.completeForm.gallon_action,
+                        gallon_qty: this.completeForm.gallon_action === 'kembalikan' ? this.completeForm
+                            .return_qty : this.completeForm.quantity
+                    };
+
                     try {
                         const res = await fetch(`/delivery/${order.id}/complete`, {
                             method: 'POST',
@@ -1006,14 +1160,15 @@
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            }
+                            },
+                            body: JSON.stringify(payload)
                         });
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.message || 'Gagal menyelesaikan pengantaran.');
 
                         this.orders = this.orders.filter(o => o.id !== order.id);
                         this.orderToComplete = null;
-                        this.triggerToast('Pengantaran selesai & pembayaran tercatat!');
+                        this.triggerToast('Pengantaran selesai & tagihan disesuaikan!');
                     } catch (e) {
                         this.actionError = e.message;
                         this.orderToComplete = null;
