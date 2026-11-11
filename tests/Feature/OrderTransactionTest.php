@@ -185,7 +185,7 @@ class OrderTransactionTest extends TestCase
             'gallon_qty' => 2,
         ]);
 
-        // Simulasikan stok terpotong & galon terpinjam
+        // Simulasikan stok terpotong & galon terpinjam 
         $this->capInventory->update(['quantity' => 998]);
         $this->customer->update(['borrowed_gallons' => 4]);
 
@@ -199,5 +199,24 @@ class OrderTransactionTest extends TestCase
         $this->assertEquals(1000, $this->capInventory->fresh()->quantity);
         // Rollback pinjaman pelanggan: saldo pinjam balik ke 2
         $this->assertEquals(2, $this->customer->fresh()->borrowed_gallons);
+    }
+
+    public function test_admin_dapat_mencatat_afkir_galon_rusak_dan_memotong_total_armada(): void
+    {
+        $admin = User::where('role', 'admin')->first() ?? User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin);
+
+        $response = $this->post(route('inventory.gallon.write-off'), [
+            'quantity' => 2,
+            'reason' => 'Pecah saat pencucian',
+        ]);
+
+        $response->assertSessionHas('success');
+
+        // Verifikasi stok berkurang 2 & log mutasi afkir_rusak tercatat
+        $this->assertDatabaseHas('inventory_logs', [
+            'reason' => 'afkir_rusak',
+            'change_amount' => -2,
+        ]);
     }
 }

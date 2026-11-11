@@ -313,13 +313,13 @@
 
                         <!-- Saklar Tampilan Grafik -->
                         <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl self-start sm:self-auto">
-                            <button type="button" @click="activeMetric = 'revenue'; updateChart()"
+                            <button type="button" @click="switchMetric('revenue')"
                                 :class="activeMetric === 'revenue' ? 'bg-white text-blue-600 font-black shadow-xs' :
                                     'text-slate-500 font-bold'"
                                 class="px-3 py-1 text-xs rounded-xl transition cursor-pointer">
                                 Omzet (Rp)
                             </button>
-                            <button type="button" @click="activeMetric = 'gallons'; updateChart()"
+                            <button type="button" @click="switchMetric('gallons')"
                                 :class="activeMetric === 'gallons' ? 'bg-white text-emerald-600 font-black shadow-xs' :
                                     'text-slate-500 font-bold'"
                                 class="px-3 py-1 text-xs rounded-xl transition cursor-pointer">
@@ -416,29 +416,45 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+        // Simpan instance chart di luar Alpine agar TIDAK dibungkus Proxy Reaktif
+        let salesChart = null;
+
         function ownerDashboardApp() {
             return {
                 activeMetric: 'revenue',
-                chartInstance: null,
                 rawChartData: @json($chartData),
 
                 init() {
                     this.$nextTick(() => {
-                        this.renderChart();
+                        this.initChart();
                     });
                 },
 
-                renderChart() {
-                    const ctx = document.getElementById('salesTrendChart');
-                    if (!ctx) return;
+                // Guard anti-spam: abaikan jika tombol yang ditekan sedang aktif
+                switchMetric(metric) {
+                    if (this.activeMetric === metric) return;
+                    this.activeMetric = metric;
+                    this.updateChart();
+                },
 
+                initChart() {
+                    const canvas = document.getElementById('salesTrendChart');
+                    if (!canvas) return;
+
+                    // Bersihkan jika ada chart sebelumnya
+                    if (salesChart) {
+                        salesChart.destroy();
+                        salesChart = null;
+                    }
+
+                    const self = this;
                     const isRevenue = this.activeMetric === 'revenue';
                     const datasetData = isRevenue ? this.rawChartData.revenue : this.rawChartData.gallons;
                     const labelTitle = isRevenue ? 'Omzet Penjualan (Rp)' : 'Jumlah Galon Terjual (Unit)';
                     const borderColor = isRevenue ? '#2563eb' : '#059669';
                     const backgroundColor = isRevenue ? 'rgba(37, 99, 235, 0.1)' : 'rgba(5, 150, 105, 0.1)';
 
-                    this.chartInstance = new Chart(ctx, {
+                    salesChart = new Chart(canvas, {
                         type: 'line',
                         data: {
                             labels: this.rawChartData.labels,
@@ -480,7 +496,7 @@
                                     callbacks: {
                                         label: function(context) {
                                             let val = context.parsed.y;
-                                            if (isRevenue) {
+                                            if (self.activeMetric === 'revenue') {
                                                 return 'Omzet: Rp ' + Number(val).toLocaleString('id-ID');
                                             }
                                             return 'Galon: ' + Number(val).toLocaleString('id-ID') + ' unit';
@@ -515,12 +531,12 @@
                                         },
                                         color: '#94a3b8',
                                         callback: function(value) {
-                                            if (isRevenue) {
+                                            if (self.activeMetric === 'revenue') {
                                                 if (value >= 1000000) return (value / 1000000) + ' Jt';
                                                 if (value >= 1000) return (value / 1000) + ' Rb';
                                                 return value;
                                             }
-                                            return value;
+                                            return value + ' unit';
                                         }
                                     }
                                 }
@@ -529,11 +545,22 @@
                     });
                 },
 
+                // Update data murni tanpa hambatan Proxy Alpine
                 updateChart() {
-                    if (this.chartInstance) {
-                        this.chartInstance.destroy();
-                    }
-                    this.renderChart();
+                    if (!salesChart) return;
+
+                    const isRevenue = this.activeMetric === 'revenue';
+                    const dataset = salesChart.data.datasets[0];
+
+                    // 1. Perbarui Data & Warna Garis
+                    dataset.label = isRevenue ? 'Omzet Penjualan (Rp)' : 'Jumlah Galon Terjual (Unit)';
+                    dataset.data = isRevenue ? this.rawChartData.revenue : this.rawChartData.gallons;
+                    dataset.borderColor = isRevenue ? '#2563eb' : '#059669';
+                    dataset.pointBorderColor = isRevenue ? '#2563eb' : '#059669';
+                    dataset.backgroundColor = isRevenue ? 'rgba(37, 99, 235, 0.1)' : 'rgba(5, 150, 105, 0.1)';
+
+                    // 2. Jalankan update Chart.js
+                    salesChart.update();
                 }
             };
         }

@@ -11,26 +11,75 @@
     <style>
         @media print {
 
-            #order-modal-backdrop,
+            /* 1. Sembunyikan SEMUA elemen di halaman (tabel, header, toast, tombol) */
+            body * {
+                visibility: hidden !important;
+            }
+
+            /* 2. Hanya tampilkan kontainer struk */
+            .receipt-modal-backdrop,
+            .receipt-modal-backdrop * {
+                visibility: visible !important;
+            }
+
+            /* 3. Posisikan struk di pojok kiri atas halaman kertas */
             .receipt-modal-backdrop {
-                background: transparent !important;
-            }
-
-            .receipt-modal-container {
-                position: static !important;
-                display: block !important;
-                padding: 0 !important;
-                background: transparent !important;
-            }
-
-            .receipt-card {
-                box-shadow: none !important;
-                border: none !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
                 width: 100% !important;
-                max-width: 100% !important;
+                height: auto !important;
+                background: transparent !important;
                 padding: 0 !important;
-                margin: 0 !important;
+                display: block !important;
             }
+
+            /* 4. Format struk hitam-putih standar printer kasir (58mm - 80mm) */
+            .receipt-card {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 78mm !important;
+                /* Lebar pas struk thermal / kertas kecil */
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: 1px dashed #000 !important;
+                border-radius: 0 !important;
+                padding: 12px !important;
+                margin: 0 !important;
+                color: #000 !important;
+                background: #fff !important;
+                font-family: 'Courier New', Courier, monospace !important;
+            }
+
+            /* Paksa semua teks & garis jadi hitam pekat tanpa latar warna */
+            .receipt-card * {
+                color: #000 !important;
+                background-color: transparent !important;
+                border-color: #000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
+
+            /* Sembunyikan elemen visual layar yang tidak perlu dicetak */
+            .screen-only {
+                display: none !important;
+            }
+
+            /* Tampilkan header khusus cetak struk */
+            .print-only {
+                display: block !important;
+            }
+
+            @page {
+                margin: 4mm;
+                size: auto;
+            }
+        }
+
+        /* Di layar normal, sembunyikan header khusus cetak */
+        .print-only {
+            display: none;
         }
     </style>
 @endpush
@@ -209,7 +258,7 @@
 
         <!-- Boks Kontainer Kartu Putih Dialog -->
         <div class="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 overflow-y-auto max-h-[92vh] touch-scroll"
-            @click.away="openOrderModal = false">
+            @click.away="if (!openConfirmModal && !openQuickAddModal) openOrderModal = false">
 
             <!-- Modal Header -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -498,14 +547,85 @@
                         <span class="text-xl font-black text-slate-900" x-text="rupiah(totalAmount)">Rp 0</span>
                     </div>
 
-                    <button type="button" @click="processNewOrder()" :disabled="formValidationError || isSubmitting"
+                    <button type="button" @click="confirmNewOrder()" :disabled="formValidationError || isSubmitting"
                         class="min-h-[46px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-98 disabled:opacity-40 disabled:pointer-events-none text-white font-black text-xs sm:text-sm rounded-2xl shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer">
-                        <span
-                            x-text="isSubmitting ? 'Memproses...' : (isPureReturn ? 'Simpan Retur Galon' : 'Simpan Transaksi')"></span>
-                        <i class="fa-solid fa-check text-xs"></i>
+                        <span x-text="isPureReturn ? 'Simpan Retur Galon' : 'Simpan Transaksi'"></span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
                     </button>
                 </div>
 
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL KONFIRMASI: CEK ULANG TRANSAKSI SEBELUM SIMPAN                     -->
+    <!-- ========================================================================= -->
+    <div x-show="openConfirmModal" x-cloak
+        class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200"
+            @click.away="openConfirmModal = false">
+
+            <div class="text-center pb-3">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl mx-auto mb-2 border border-blue-100">
+                    <i class="fa-solid fa-circle-question"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-900">Konfirmasi Transaksi</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Pastikan pesanan pelanggan sudah benar</p>
+            </div>
+
+            <!-- Ringkasan Singkat Pesanan -->
+            <div class="my-4 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Pelanggan</span>
+                    <span class="font-bold text-slate-800"
+                        x-text="selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum (Walk-in)'"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Layanan</span>
+                    <span class="font-bold text-slate-800"
+                        x-text="newOrder.orderType === 'ambil_sendiri' ? 'Walk-in (Ambil Sendiri)' : 'Pesan Antar (Kurir)'"></span>
+                </div>
+                <template x-if="!isPureReturn">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Item & Jumlah</span>
+                        <span class="font-bold text-slate-800"
+                            x-text="newOrder.quantity + ' Galon (' + (priceTiers.find(t => t.id === newOrder.priceTierId)?.name || 'Air') + ')'"></span>
+                    </div>
+                </template>
+                <template x-if="isPureReturn">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Retur Galon</span>
+                        <span class="font-bold text-purple-700" x-text="pureReturnQty + ' Galon Dipulangkan'"></span>
+                    </div>
+                </template>
+                <div class="pt-2 border-t border-slate-200 flex justify-between items-center text-sm">
+                    <span class="font-black text-slate-700">Total Tagihan</span>
+                    <span class="font-black text-blue-600" x-text="rupiah(totalAmount)"></span>
+                </div>
+            </div>
+
+            <template x-if="newOrder.orderType === 'ambil_sendiri' && !isPureReturn">
+                <p
+                    class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 shrink-0"></i>
+                    <span>Pesanan Walk-in langsung selesai dan <strong>tidak dapat dibatalkan</strong>.</span>
+                </p>
+            </template>
+
+            <!-- Tombol Aksi Konfirmasi -->
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" @click.stop="openConfirmModal = false; openOrderModal = true"
+                    class="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs transition cursor-pointer">
+                    Cek Lagi
+                </button>
+                <button type="button" @click="processNewOrder()"
+                    class="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-check text-xs"></i>
+                    <span>Ya, Simpan</span>
+                </button>
             </div>
 
         </div>
@@ -569,74 +689,84 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL STRUK / KONFIRMASI TRANSAKSI BERHASIL (S2-FE-04)                    -->
+    <!-- MODAL STRUK / KONFIRMASI TRANSAKSI BERHASIL                               -->
     <!-- ========================================================================= -->
     <div x-show="openReceiptModal" x-cloak
         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 receipt-modal-backdrop">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 flex flex-col receipt-card"
             @click.away="openReceiptModal = false">
 
-            <!-- Status Icon Header -->
-            <div class="flex flex-col items-center text-center pb-4 border-b border-dashed border-slate-200">
+            <!-- TAMPILAN KHUSUS CETAK STRUK (MONOKROM) -->
+            <div class="print-only text-center pb-3 border-b border-dashed border-black">
+                <h2 class="text-base font-black tracking-wider uppercase">SULTAN WATER</h2>
+                <p class="text-[10px]">Depot Air Minum Isi Ulang</p>
+                <p class="text-[9px] mt-0.5" x-text="todayDate"></p>
+            </div>
+
+            <!-- TAMPILAN KHUSUS LAYAR LAYOUT (ICON HIJAU DLL) -->
+            <div class="screen-only flex flex-col items-center text-center pb-4 border-b border-dashed border-slate-200">
                 <div
                     class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-2">
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 <h3 class="text-lg font-black text-slate-900">Pembayaran Berhasil!</h3>
-                <p class="text-xs text-slate-400 font-mono" x-text="lastOrder ? lastOrder.order_number : ''"></p>
+            </div>
+
+            <!-- Info No Order & Waktu -->
+            <div class="py-2 flex justify-between items-center text-xs border-b border-dashed border-slate-200">
+                <span class="text-slate-500 font-mono text-[11px]"
+                    x-text="lastOrder ? lastOrder.order_number : ''"></span>
+                <span class="text-slate-500 font-mono text-[11px]" x-text="lastOrder ? lastOrder.time : ''"></span>
             </div>
 
             <!-- Rincian Nota / Struk -->
             <template x-if="lastOrder">
-                <div class="py-4 space-y-2.5 text-xs border-b border-dashed border-slate-200">
-                    <div class="flex justify-between text-slate-500">
-                        <span>Pelanggan</span>
-                        <span class="font-bold text-slate-800" x-text="lastOrder.customer_name"></span>
+                <div class="py-3 space-y-2 text-xs border-b border-dashed border-slate-200">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Pelanggan</span>
+                        <span class="font-bold text-slate-900" x-text="lastOrder.customer_name"></span>
                     </div>
-                    <div class="flex justify-between text-slate-500">
-                        <span>Layanan</span>
-                        <span class="font-bold text-slate-800"
-                            x-text="lastOrder.order_type === 'ambil_sendiri' ? 'Walk-in (Ambil Sendiri)' : 'Pesan Antar'"></span>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Layanan</span>
+                        <span class="font-bold text-slate-900"
+                            x-text="lastOrder.order_type === 'ambil_sendiri' ? 'Walk-in' : 'Pesan Antar'"></span>
                     </div>
-                    <div class="flex justify-between text-slate-500">
-                        <span>Item & Varian</span>
-                        <span class="font-bold text-slate-800" x-text="lastOrder.tier_name"></span>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Item</span>
+                        <span class="font-bold text-slate-900" x-text="lastOrder.tier_name"></span>
                     </div>
-                    <div class="flex justify-between text-slate-500">
-                        <span>Qty & Opsi Galon</span>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Jumlah & Opsi</span>
                         <div class="text-right">
-                            <span class="font-bold text-slate-800" x-text="lastOrder.qty + ' Galon'"></span>
-                            <div class="text-[10px] text-blue-600 font-semibold"
-                                x-text="formatGallonAction(order.gallon_action, order.gallon_qty, order.tier_code)">
+                            <span class="font-bold text-slate-900" x-text="lastOrder.qty + ' Galon'"></span>
+                            <div class="text-[10px] text-slate-600"
+                                x-text="formatGallonAction(lastOrder.gallon_action, lastOrder.gallon_qty, lastOrder.tier_code)">
                             </div>
                         </div>
                     </div>
 
-                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-sm">
-                        <span class="font-black text-slate-900">Total Tagihan</span>
+                    <div class="pt-2 border-t border-dashed border-slate-200 flex justify-between items-center text-sm">
+                        <span class="font-black text-slate-900">Total</span>
                         <span class="font-black text-slate-900" x-text="rupiah(lastOrder.total_amount)"></span>
                     </div>
 
-                    <!-- Ringkasan Pembayaran & Status -->
-                    <div class="pt-2 bg-slate-50 p-2.5 rounded-xl space-y-1">
-                        <div class="flex justify-between text-slate-600">
-                            <span>Metode</span>
-                            <span class="font-bold uppercase">Tunai</span>
-                        </div>
-                        <div class="flex justify-between text-slate-600 items-center">
-                            <span>Status</span>
-                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase"
-                                :class="lastOrder.payment_status === 'lunas' ? 'bg-emerald-100 text-emerald-800' :
-                                    'bg-amber-100 text-amber-800'"
-                                x-text="lastOrder.payment_status === 'lunas' ? 'Lunas' : 'Belum Lunas (COD)'">
-                            </span>
-                        </div>
+                    <div class="pt-2 flex justify-between text-xs">
+                        <span class="text-slate-500">Metode / Status</span>
+                        <span class="font-bold uppercase text-slate-900"
+                            x-text="'Tunai (' + (lastOrder.payment_status === 'lunas' ? 'LUNAS' : 'COD') + ')'">
+                        </span>
                     </div>
                 </div>
             </template>
 
-            <!-- Action Buttons -->
-            <div class="pt-4 flex items-center gap-2 print:hidden">
+            <!-- FOOTER KHUSUS CETAK -->
+            <div class="print-only text-center pt-3 text-[10px]">
+                <p>Terima Kasih Atas Kunjungan Anda</p>
+                <p class="text-[9px] mt-0.5">Air Bersih, Sehat & Higienis</p>
+            </div>
+
+            <!-- Action Buttons (Hanya Tampil di Layar Monitor) -->
+            <div class="pt-4 flex items-center gap-2 print:hidden screen-only">
                 <button type="button" @click="window.print()"
                     class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
                     <i class="fa-solid fa-print"></i>
@@ -681,6 +811,7 @@
                 openOrderModal: false,
                 openQuickAddModal: false,
                 openReceiptModal: false,
+                openConfirmModal: false,
                 isSubmitting: false,
                 showToast: false,
                 toastMessage: '',
@@ -840,6 +971,11 @@
                     }
                 },
 
+                confirmNewOrder() {
+                    if (this.formValidationError || this.isSubmitting) return;
+                    this.openConfirmModal = true;
+                },
+
                 selectGallonAction(action) {
                     if (this.newOrder.tierCode === 'galon_baru_isi') return;
                     this.newOrder.gallonAction = action;
@@ -870,6 +1006,7 @@
 
                 async processNewOrder() {
                     if (this.formValidationError || this.isSubmitting) return;
+                    this.openConfirmModal = false;
                     this.isSubmitting = true;
 
                     const isNewGallon = !this.isPureReturn && (this.newOrder.tierCode === 'galon_baru_isi');

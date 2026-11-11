@@ -172,7 +172,7 @@
 
                     <!-- Tombol Utama Status Diantar: "Konfirmasi Antar & Tagih" -->
                     <template x-if="order.delivery_status === 'diantar'">
-                        <button type="button" @click="completeDelivery(order)" :disabled="isProcessing === order.id"
+                        <button type="button" @click="confirmComplete(order)" :disabled="isProcessing === order.id"
                             class="flex-1 h-12 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-black text-sm shadow-md shadow-emerald-500/20 transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer">
                             <i class="fa-solid fa-circle-check"></i>
                             <span
@@ -202,17 +202,14 @@
         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
         <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200"
             @click.away="orderToCancel = null">
-
             <div
                 class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl mx-auto mb-3">
                 <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
 
             <h3 class="text-base font-black text-slate-900 text-center">Batalkan Pesanan Ini?</h3>
-            <p class="text-[11px] text-purple-800 font-medium leading-relaxed">
-                <i class="fa-solid fa-circle-info mr-1"></i>
-                Retur murni mengurangi saldo galon pinjaman pelanggan (Gp) tanpa memotong stok tutup dan tagihan adalah Rp0.
-            </p>
+            <p class="text-xs text-slate-500 text-center mt-1">Pesanan akan dibatalkan dan kuota stok tutup akan
+                dikembalikan ke inventaris.</p>
 
             <div class="grid grid-cols-2 gap-2 mt-5 pt-3 border-t border-slate-100">
                 <button type="button" @click="orderToCancel = null"
@@ -227,16 +224,59 @@
         </div>
     </div>
 
+    <!-- MODAL KONFIRMASI PENGANTARAN SELESAI -->
+    <div x-show="orderToComplete" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200"
+            @click.away="orderToComplete = null">
+
+            <div
+                class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mx-auto mb-3">
+                <i class="fa-solid fa-money-bill-wave"></i>
+            </div>
+
+            <h3 class="text-base font-black text-slate-900 text-center">Selesaikan Pengantaran?</h3>
+            <p class="text-xs text-slate-500 text-center mt-1">Pastikan air galon sudah diserahkan dan uang pembayaran
+                tunai telah diterima.</p>
+
+            <template x-if="orderToComplete">
+                <div class="my-4 p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs space-y-1.5">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Pelanggan:</span>
+                        <span class="font-bold text-slate-800" x-text="orderToComplete.customer.name"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Tagihan COD:</span>
+                        <span class="font-black text-emerald-600 text-sm"
+                            x-text="rupiah(orderToComplete.total_amount)"></span>
+                    </div>
+                </div>
+            </template>
+
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                <button type="button" @click="orderToComplete = null"
+                    class="h-11 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700 transition cursor-pointer">
+                    Cek Lagi
+                </button>
+                <button type="button" @click="executeCompleteDelivery()" :disabled="isProcessing"
+                    class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-black text-xs text-white transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-check text-xs"></i>
+                    <span x-text="isProcessing ? 'Menyimpan...' : 'Sudah Diterima'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL FORM JUAL DADAKAN & RETUR MURNI MOBILE (Tiket #46, #47, #48) -->
     <div x-show="openQuickSaleModal" x-cloak
         class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
         <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto touch-scroll"
-            @click.away="openQuickSaleModal = false">
+            @click.away="if (!openConfirmModal && !openMiniQuickAdd) openQuickSaleModal = false">
 
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                     <h3 class="text-base sm:text-lg font-black text-slate-900">Jual Dadakan di Jalan</h3>
-                    <p class="text-xs text-slate-400">Transaksi langsung berstatus selesai[cite: 1, 5]</p>
+                    <p class="text-xs text-slate-400">Transaksi langsung selesai di tempat & tunai lunas</p>
                 </div>
                 <button type="button" @click="openQuickSaleModal = false"
                     class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs cursor-pointer">
@@ -476,17 +516,17 @@
                     </div>
                 </template>
 
-                <!-- Total & Tombol Simpan -->
+                <!-- Total & Tombol Buka Konfirmasi -->
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                     <div>
                         <span class="text-[11px] text-slate-400 font-semibold block">Total Tagihan</span>
                         <span class="text-xl font-black text-slate-900" x-text="rupiah(calculatedTotal)"></span>
                     </div>
 
-                    <button type="button" @click="submitQuickSale()" :disabled="isSubmitting"
+                    <button type="button" @click="confirmQuickSale()" :disabled="isSubmitting"
                         class="h-12 px-6 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm rounded-2xl shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer">
-                        <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Transaksi'"></span>
-                        <i class="fa-solid fa-check text-xs"></i>
+                        <span x-text="isPureReturn ? 'Simpan Retur Galon' : 'Simpan Transaksi'"></span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
                     </button>
                 </div>
 
@@ -494,48 +534,134 @@
         </div>
     </div>
 
+    <!-- MODAL KONFIRMASI: CEK ULANG TRANSAKSI DADAKAN SEBELUM SIMPAN -->
+    <div x-show="openConfirmModal" x-cloak
+        class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200"
+            @click.away="openConfirmModal = false">
+
+            <div class="text-center pb-3">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl mx-auto mb-2 border border-blue-100">
+                    <i class="fa-solid fa-circle-question"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-900">Konfirmasi Transaksi Dadakan</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Pastikan pesanan di jalan sudah benar</p>
+            </div>
+
+            <!-- Ringkasan Singkat Pesanan -->
+            <div class="my-4 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Pelanggan</span>
+                    <span class="font-bold text-slate-800"
+                        x-text="selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum (Walk-in)'"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Layanan</span>
+                    <span class="font-bold text-slate-800">Jual Dadakan (Selesai Langsung)</span>
+                </div>
+                <template x-if="!isPureReturn">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Item & Jumlah</span>
+                        <span class="font-bold text-slate-800"
+                            x-text="formOrder.quantity + ' Galon (' + (priceTiers.find(t => t.id === formOrder.priceTierId)?.name || 'Air') + ')'"></span>
+                    </div>
+                </template>
+                <template x-if="isPureReturn">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Retur Galon</span>
+                        <span class="font-bold text-purple-700"
+                            x-text="formOrder.pureReturnQty + ' Galon Dipulangkan'"></span>
+                    </div>
+                </template>
+                <div class="pt-2 border-t border-slate-200 flex justify-between items-center text-sm">
+                    <span class="font-black text-slate-700">Total Tagihan (Tunai)</span>
+                    <span class="font-black text-blue-600" x-text="rupiah(calculatedTotal)"></span>
+                </div>
+            </div>
+
+            <p
+                class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500 shrink-0"></i>
+                <span>Transaksi dadakan langsung lunas dan <strong>tidak dapat dibatalkan</strong>.</span>
+            </p>
+
+            <!-- Tombol Aksi Konfirmasi -->
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" @click.stop="openConfirmModal = false; openQuickSaleModal = true"
+                    class="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs transition cursor-pointer">
+                    Cek Lagi
+                </button>
+                <button type="button" @click="executeSubmitQuickSale()" :disabled="isSubmitting"
+                    class="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-check text-xs"></i>
+                    <span x-text="isSubmitting ? 'Menyimpan...' : 'Ya, Simpan'"></span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- MINI QUICK ADD CUSTOMER MODAL (Tiket #47) -->
     <div x-show="openMiniQuickAdd" x-cloak
         class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
         <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200"
-            @click.away="openMiniQuickAdd = false">
+            @click.away="openMiniQuickAdd = false; openQuickSaleModal = true">
             <div class="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
                 <h4 class="text-sm font-black text-slate-900">Tambah Pelanggan Cepat</h4>
-                <button type="button" @click="openMiniQuickAdd = false"
+                <button type="button" @click.stop="openMiniQuickAdd = false; openQuickSaleModal = true"
                     class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="space-y-3">
+            <!-- Menggunakan form submit agar validasi HTML5 'required' aktif otomatis -->
+            <form @submit.prevent="saveQuickAdd()" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Nama <span
-                            class="text-rose-500">*</span></label>
-                    <input type="text" x-model="quickAddForm.name" placeholder="Nama Pelanggan"
+                    <label class="block text-xs font-bold text-slate-600 mb-1">
+                        Nama <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" x-model="quickAddForm.name" placeholder="Nama Pelanggan" required
                         class="w-full min-h-[40px] px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">No. WhatsApp <span
-                            class="text-rose-500">*</span></label>
-                    <input type="tel" x-model="quickAddForm.whatsapp_number" placeholder="08xxxxxxxxxx"
+                    <label class="block text-xs font-bold text-slate-600 mb-1">
+                        No. WhatsApp <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="tel" x-model="quickAddForm.whatsapp_number" placeholder="08xxxxxxxxxx" required
                         class="w-full min-h-[40px] px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Alamat (Opsional)</label>
-                    <input type="text" x-model="quickAddForm.address" placeholder="Patokan / Alamat"
+                    <label class="block text-xs font-bold text-slate-600 mb-1">
+                        Alamat Lengkap / Patokan <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" x-model="quickAddForm.address"
+                        placeholder="Jl. Rajawali No. 12 / Patokan Rumah" required
                         class="w-full min-h-[40px] px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-                    <button type="button" @click="openMiniQuickAdd = false"
+                    <button type="button" @click.stop="openMiniQuickAdd = false; openQuickSaleModal = true"
                         class="px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer">Batal</button>
-                    <button type="button" @click="saveQuickAdd()" :disabled="isQuickAdding"
+                    <button type="submit" :disabled="isQuickAdding"
                         class="px-4 py-2 bg-blue-600 text-white font-black text-xs rounded-xl shadow-xs hover:bg-blue-700 disabled:opacity-50 cursor-pointer">
                         <span x-text="isQuickAdding ? 'Menyimpan...' : 'Simpan'"></span>
                     </button>
                 </div>
-            </div>
+            </form>
         </div>
+    </div>
+
+    <!-- TOAST NOTIFIKASI BERHASIL MOBILE -->
+    <div x-show="showToast" x-cloak x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-4"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-70 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-800 w-[90%] max-w-sm">
+        <div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <div class="text-xs font-bold" x-text="toastMessage">Transaksi dadakan berhasil disimpan!</div>
     </div>
 @endsection
 
@@ -550,14 +676,18 @@
                 isProcessing: null,
                 actionError: '',
                 orderToCancel: null,
+                orderToComplete: null,
 
-                // Quick Sale & Smart Search State
+                // Quick Sale, Modal Konfirmasi & Toast State
                 openQuickSaleModal: false,
+                openConfirmModal: false,
                 openMiniQuickAdd: false,
                 isPureReturn: false,
                 isSubmitting: false,
                 isQuickAdding: false,
                 formError: '',
+                showToast: false,
+                toastMessage: '',
 
                 customerSearchQuery: '',
                 customerResults: [],
@@ -575,7 +705,7 @@
                     tierAppliesTo: priceTiers.length > 0 ? priceTiers[0].applies_to : 'isi_ulang',
                     quantity: 1,
                     gallonAction: 'tukar_seimbang',
-                    returnQty: 1, // <--- Tambahkan untuk menampung jumlah galon kembali saat beli air
+                    returnQty: 1,
                     pureReturnQty: 1
                 },
 
@@ -601,6 +731,14 @@
                     let clean = String(num).replace(/[^0-9]/g, '');
                     if (clean.startsWith('0')) clean = '62' + clean.slice(1);
                     return clean;
+                },
+
+                triggerToast(msg) {
+                    this.toastMessage = msg;
+                    this.showToast = true;
+                    setTimeout(() => {
+                        this.showToast = false;
+                    }, 3000);
                 },
 
                 formatAction(action, qty) {
@@ -632,6 +770,7 @@
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.message || 'Gagal memulai pengantaran.');
                         order.delivery_status = 'diantar';
+                        this.triggerToast('Pesanan mulai diantar');
                     } catch (e) {
                         this.actionError = e.message;
                     } finally {
@@ -655,6 +794,7 @@
                         if (!res.ok) throw new Error(data.message || 'Gagal menyelesaikan pengantaran.');
 
                         this.orders = this.orders.filter(o => o.id !== order.id);
+                        this.triggerToast('Pengantaran berhasil diselesaikan!');
                     } catch (e) {
                         this.actionError = e.message;
                     } finally {
@@ -664,6 +804,11 @@
 
                 confirmCancel(order) {
                     this.orderToCancel = order;
+                    this.actionError = '';
+                },
+
+                confirmComplete(order) {
+                    this.orderToComplete = order;
                     this.actionError = '';
                 },
 
@@ -685,6 +830,7 @@
 
                         this.orders = this.orders.filter(o => o.id !== orderId);
                         this.orderToCancel = null;
+                        this.triggerToast('Pesanan berhasil dibatalkan.');
                     } catch (e) {
                         this.actionError = e.message;
                         this.orderToCancel = null;
@@ -725,7 +871,13 @@
                 },
 
                 async saveQuickAdd() {
-                    if (!this.quickAddForm.name || !this.quickAddForm.whatsapp_number) return;
+                    // Validasi: Nama, WhatsApp, dan Alamat wajib diisi
+                    if (!this.quickAddForm.name || !this.quickAddForm.whatsapp_number || !this.quickAddForm.address
+                        .trim()) {
+                        alert('Nama, No. WhatsApp, dan Alamat lengkap wajib diisi!');
+                        return;
+                    }
+
                     this.isQuickAdding = true;
                     try {
                         const res = await fetch('{{ route('customers.quick-store') }}', {
@@ -735,18 +887,31 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
-                            body: JSON.stringify(this.quickAddForm)
+                            body: JSON.stringify({
+                                name: this.quickAddForm.name.trim(),
+                                whatsapp_number: this.quickAddForm.whatsapp_number.trim(),
+                                address: this.quickAddForm.address.trim()
+                            })
                         });
+
                         const result = await res.json();
-                        if (!res.ok) throw new Error(result.message || 'Gagal menambah pelanggan.');
+                        if (!res.ok) {
+                            if (result.errors) {
+                                const firstErrorKey = Object.keys(result.errors)[0];
+                                throw new Error(result.errors[firstErrorKey][0]);
+                            }
+                            throw new Error(result.message || 'Gagal menambah pelanggan.');
+                        }
 
                         this.selectCustomer(result.data);
                         this.openMiniQuickAdd = false;
+                        this.openQuickSaleModal = true;
                         this.quickAddForm = {
                             name: '',
                             whatsapp_number: '',
                             address: ''
                         };
+                        this.triggerToast('Pelanggan berhasil ditambahkan!');
                     } catch (e) {
                         alert(e.message);
                     } finally {
@@ -782,19 +947,7 @@
                     }
                 },
 
-                updateOrderQuantity(delta) {
-                    let next = (this.formOrder.quantity || 1) + delta;
-                    if (next < 1) next = 1;
-                    this.formOrder.quantity = next;
-
-                    if (this.formOrder.gallonAction === 'kembalikan' && this.selectedCustomer) {
-                        if (this.formOrder.returnQty > this.selectedCustomer.borrowed_gallons) {
-                            this.formOrder.returnQty = this.selectedCustomer.borrowed_gallons;
-                        }
-                    }
-                },
-
-                async submitQuickSale() {
+                confirmQuickSale() {
                     this.formError = '';
 
                     if (this.isPureReturn) {
@@ -814,7 +967,7 @@
                     } else {
                         if (['pinjam', 'kembalikan'].includes(this.formOrder.gallonAction) && !this.selectedCustomer) {
                             this.formError =
-                            'Pelanggan terdaftar wajib dipilih jika meminjam atau mengembalikan galon.';
+                                'Pelanggan terdaftar wajib dipilih jika meminjam atau mengembalikan galon.';
                             return;
                         }
 
@@ -836,6 +989,41 @@
                         }
                     }
 
+                    // Tampilkan modal konfirmasi
+                    this.openConfirmModal = true;
+                },
+
+                async executeCompleteDelivery() {
+                    if (!this.orderToComplete) return;
+                    const order = this.orderToComplete;
+                    this.isProcessing = order.id;
+                    this.actionError = '';
+
+                    try {
+                        const res = await fetch(`/delivery/${order.id}/complete`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Gagal menyelesaikan pengantaran.');
+
+                        this.orders = this.orders.filter(o => o.id !== order.id);
+                        this.orderToComplete = null;
+                        this.triggerToast('Pengantaran selesai & pembayaran tercatat!');
+                    } catch (e) {
+                        this.actionError = e.message;
+                        this.orderToComplete = null;
+                    } finally {
+                        this.isProcessing = null;
+                    }
+                },
+
+                async executeSubmitQuickSale() {
+                    this.openConfirmModal = false;
                     this.isSubmitting = true;
 
                     const isNewGallon = !this.isPureReturn && this.isNewGallonTier;
@@ -843,7 +1031,6 @@
                         '{{ route('pos.order.refill') }}';
                     const productId = isNewGallon ? 2 : 1;
 
-                    // Tentukan gallon_qty secara tepat
                     let finalGallonQty = 0;
                     if (!isNewGallon) {
                         if (this.formOrder.gallonAction === 'tukar_seimbang' || this.formOrder.gallonAction ===
@@ -904,7 +1091,7 @@
                             }
                         }
 
-                        alert(this.isPureReturn ? 'Retur galon berhasil dicatat!' :
+                        this.triggerToast(this.isPureReturn ? 'Retur galon berhasil dicatat!' :
                             'Transaksi dadakan berhasil disimpan!');
                         this.openQuickSaleModal = false;
                         this.clearCustomer();
