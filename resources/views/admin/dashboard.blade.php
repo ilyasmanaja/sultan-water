@@ -11,12 +11,12 @@
 @section('page-badge')
     <span
         class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
-        Administrator
+        Pemilik Depot
     </span>
 @endsection
 
 @section('page-subtitle')
-    <span>Ringkasan performa finansial, aset armada galon, dan tren penjualan operasional</span>
+    <span>Pantau pemasukan, pengeluaran, stok galon, dan grafik penjualan harian</span>
 @endsection
 
 @section('header-actions')
@@ -46,14 +46,10 @@
 @section('content')
     <div class="max-w-7xl mx-auto space-y-6">
 
-        <!-- ===================================================================== -->
-        <!-- 1. INDIKATOR VISUAL LOW-STOCK ALERT TUTUP GALON (TIKET #77)           -->
-        <!-- ===================================================================== -->
+        <!-- 1. INDIKATOR VISUAL LOW-STOCK ALERT TUTUP GALON -->
         <x-low-stock-alert :stock="$capStatus['stock']" :threshold="$capStatus['threshold']" :is-low-stock="$capStatus['is_low_stock']" />
 
-        <!-- ===================================================================== -->
-        <!-- 2. PENANDA VISUAL AUDIT ARMADA GALON JIKA MINUS (BR-INV-02 §6.A)      -->
-        <!-- ===================================================================== -->
+        <!-- 2. PENANDA VISUAL AUDIT GALON JIKA MINUS -->
         @if ($gallonFleet['needs_audit'])
             <div
                 class="p-4 sm:p-5 rounded-3xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
@@ -64,13 +60,13 @@
                     </div>
                     <div>
                         <h4 class="text-sm font-black text-rose-950">
-                            Total Galon Dimiliki Perlu Diperiksa!
+                            Jumlah Galon Depot Perlu Diperiksa!
                         </h4>
                         <p class="text-xs text-rose-800 font-medium mt-0.5">
-                            Saldo armada galon bernilai minus (Total Dimiliki:
+                            Catatan jumlah galon depot bernilai minus (Total Milik Depot:
                             <strong>{{ $gallonFleet['total_owned'] }}</strong>,
-                            Standby di Depot: <strong>{{ $gallonFleet['standby'] }}</strong>).
-                            Hal ini terjadi jika penjualan galon baru melebihi catatan pembelian dari distributor.
+                            Ready di Depot: <strong>{{ $gallonFleet['standby'] }}</strong>).
+                            Segera catat pembelian galon baru jika baru saja kulakan dari distributor.
                         </p>
                     </div>
                 </div>
@@ -82,15 +78,13 @@
             </div>
         @endif
 
-        <!-- ===================================================================== -->
-        <!-- 3. KARTU RINGKASAN FINANSIAL (NP = R - E)                              -->
-        <!-- ===================================================================== -->
+        <!-- 3. KARTU RINGKASAN FINANSIAL -->
         <div>
             <div class="flex items-center justify-between mb-3">
                 <div>
-                    <h3 class="text-sm font-black text-slate-900 tracking-tight">Kinerja Finansial Periode Terpilih</h3>
-                    <p class="text-[11px] text-slate-400 font-medium">Berdasarkan order lunas dan biaya operasional yang
-                        dicatat</p>
+                    <h3 class="text-sm font-black text-slate-900 tracking-tight">Ringkasan Keuangan</h3>
+                    <p class="text-[11px] text-slate-400 font-medium">Berdasarkan transaksi lunas dan catatan pengeluaran
+                    </p>
                 </div>
                 <span class="text-[11px] font-bold text-slate-400">
                     {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }} -
@@ -100,11 +94,10 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-                <!-- KARTU A: OMZET PENJUALAN (R) -->
+                <!-- KARTU A: OMZET PENJUALAN -->
                 <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Omzet Penjualan
-                            (R)</span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Omzet Penjualan</span>
                         <div
                             class="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm border border-blue-100">
                             <i class="fa-solid fa-coins"></i>
@@ -122,10 +115,11 @@
                     </div>
                 </div>
 
-                <!-- KARTU B: BEBAN OPERASIONAL (E) -->
+                <!-- KARTU B: TOTAL PENGELUARAN -->
                 <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Total Beban (E)</span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Total
+                            Pengeluaran</span>
                         <div
                             class="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm border border-amber-100">
                             <i class="fa-solid fa-receipt"></i>
@@ -137,16 +131,16 @@
                         </div>
                         <div class="mt-1 text-[11px] text-slate-400 font-medium truncate"
                             title="3 Kelompok: Kemasan, Logistik & Beban Tetap">
-                            3 Kategori Operasional
+                            3 Kategori Pengeluaran
                         </div>
                     </div>
                 </div>
 
-                <!-- KARTU C: LABA BERSIH (NET PROFIT: NP = R - E) -->
+                <!-- KARTU C: LABA BERSIH -->
                 <div
                     class="bg-white rounded-3xl p-5 border {{ $financialSummary['is_profit'] ? 'border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/30' : 'border-rose-200/80 bg-gradient-to-br from-white to-rose-50/30' }} shadow-xs flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Laba Bersih (NP)</span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Laba Bersih</span>
                         <div
                             class="w-9 h-9 rounded-2xl {{ $financialSummary['is_profit'] ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200' }} flex items-center justify-center text-sm">
                             <i
@@ -161,7 +155,7 @@
                         <div class="mt-1 flex items-center gap-1.5">
                             <span
                                 class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider {{ $financialSummary['is_profit'] ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
-                                {{ $financialSummary['is_profit'] ? 'Surplus / Laba' : 'Defisit / Rugi' }}
+                                {{ $financialSummary['is_profit'] ? 'Untung / Laba' : 'Rugi / Defisit' }}
                             </span>
                         </div>
                     </div>
@@ -183,7 +177,7 @@
                             <span class="text-xs font-bold text-slate-400">unit</span>
                         </div>
                         <div class="mt-1 flex items-center justify-between text-[11px]">
-                            <span class="text-slate-400 font-medium">Batas: {{ $capStatus['threshold'] }} unit</span>
+                            <span class="text-slate-400 font-medium">Batas min: {{ $capStatus['threshold'] }} unit</span>
                             @if ($capStatus['is_low_stock'])
                                 <span class="font-extrabold text-amber-600">Menipis!</span>
                             @else
@@ -196,9 +190,7 @@
             </div>
         </div>
 
-        <!-- ===================================================================== -->
-        <!-- 4. TIGA KARTU PEMANTAUAN MAKRO ARMADA GALON (BR-INV-02 §6.A)          -->
-        <!-- ===================================================================== -->
+        <!-- 4. TIGA KARTU PANTAUAN STOK GALON DEPOT -->
         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
                 <div>
@@ -208,28 +200,28 @@
                             Aset Fisik
                         </span>
                         <h3 class="text-base font-black text-slate-900 tracking-tight">
-                            Pemantauan Makro Armada Galon Depot
+                            Pantauan Stok Galon Depot
                         </h3>
                     </div>
                     <p class="text-xs text-slate-400 font-medium mt-0.5">
-                        Tiga angka kunci untuk pertimbangan keputusan pembelian galon baru saat pelanggan bertambah
+                        Rincian posisi seluruh galon milik depot saat ini
                     </p>
                 </div>
                 <a href="{{ route('inventory.restock') }}"
                     class="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
-                    <span>Kelola Restock</span>
+                    <span>Kelola Stok Galon</span>
                     <i class="fa-solid fa-arrow-right text-[10px]"></i>
                 </a>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-5">
 
-                <!-- KARTU MAKRO 1: TOTAL GALON DIMILIKI (G_total) -->
+                <!-- KARTU 1: TOTAL GALON MILIK DEPOT -->
                 <div
                     class="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                     <div>
                         <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
-                            1. Total Galon Dimiliki (G<sub class="font-bold">total</sub>)
+                            1. Total Galon Milik Depot
                         </span>
                         <div
                             class="text-2xl sm:text-3xl font-black {{ $gallonFleet['total_owned'] < 0 ? 'text-rose-600' : 'text-slate-900' }}">
@@ -237,7 +229,7 @@
                             <span class="text-xs font-bold text-slate-400">galon</span>
                         </div>
                         <p class="text-[11px] text-slate-400 font-medium mt-1">
-                            Di depot maupun di tangan pelanggan
+                            Gabungan di depot & di tangan pelanggan
                         </p>
                     </div>
                     <div
@@ -246,20 +238,20 @@
                     </div>
                 </div>
 
-                <!-- KARTU MAKRO 2: GALON DIPINJAM PELANGGAN (G_dipinjam) -->
+                <!-- KARTU 2: GALON DIPINJAM PELANGGAN -->
                 <a href="{{ route('admin.customers.index', ['filter' => 'borrowing']) }}"
                     class="p-4 sm:p-5 rounded-2xl bg-amber-50/50 border border-amber-200/80 flex items-center justify-between hover:bg-amber-100/50 transition cursor-pointer"
                     title="Lihat daftar pelanggan yang sedang meminjam galon">
                     <div>
                         <span class="text-[10px] font-black uppercase tracking-wider text-amber-700 block mb-1">
-                            2. Galon Dipinjam (G<sub class="font-bold">dipinjam</sub>)
+                            2. Galon Dipinjam Pelanggan
                         </span>
                         <div class="text-2xl sm:text-3xl font-black text-amber-900">
                             {{ number_format($gallonFleet['borrowed'], 0, ',', '.') }}
                             <span class="text-xs font-bold text-amber-600">galon</span>
                         </div>
                         <p class="text-[11px] text-amber-700/80 font-medium mt-1">
-                            Akumulasi saldo pinjaman seluruh pelanggan
+                            Total galon yang dibawa pelanggan
                         </p>
                     </div>
                     <div
@@ -268,12 +260,12 @@
                     </div>
                 </a>
 
-                <!-- KARTU MAKRO 3: GALON STANDBY DI DEPOT (G_standby) -->
+                <!-- KARTU 3: GALON READY DI DEPOT -->
                 <div
                     class="p-4 sm:p-5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 flex items-center justify-between">
                     <div>
                         <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700 block mb-1">
-                            3. Galon Standby (G<sub class="font-bold">standby</sub>)
+                            3. Galon Ready di Depot
                         </span>
                         <div
                             class="text-2xl sm:text-3xl font-black {{ $gallonFleet['standby'] < 0 ? 'text-rose-600' : 'text-emerald-900' }}">
@@ -281,8 +273,7 @@
                             <span class="text-xs font-bold text-emerald-600">galon</span>
                         </div>
                         <p class="text-[11px] text-emerald-700/80 font-medium mt-1">
-                            Siap pakai di depot (G<sub class="font-bold">total</sub> - G<sub
-                                class="font-bold">dipinjam</sub>)
+                            Siap dipakai isi ulang di tempat
                         </p>
                     </div>
                     <div
@@ -294,12 +285,10 @@
             </div>
         </div>
 
-        <!-- ===================================================================== -->
-        <!-- 5. GRAFIK TREN PENJUALAN MINGGUAN/BULANAN & RINCIAN BEBAN             -->
-        <!-- ===================================================================== -->
+        <!-- 5. GRAFIK TREN PENJUALAN & RINCIAN PENGELUARAN -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            <!-- KIRI: GRAFIK PENJUALAN CHART.JS (COL-SPAN-2) -->
+            <!-- KIRI: GRAFIK PENJUALAN -->
             <div
                 class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col justify-between">
                 <div>
@@ -307,8 +296,8 @@
                         class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
                         <div>
                             <h3 class="text-base font-black text-slate-900 tracking-tight">Tren Penjualan Harian</h3>
-                            <p class="text-xs text-slate-400 font-medium">Visualisasi omzet harian dan volume galon yang
-                                terjual</p>
+                            <p class="text-xs text-slate-400 font-medium">Grafik pemasukan harian dan jumlah galon terjual
+                            </p>
                         </div>
 
                         <!-- Saklar Tampilan Grafik -->
@@ -336,19 +325,19 @@
 
                 <div
                     class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
-                    <span>Sumber: Transaksi POS Lunas non-batal</span>
-                    <span class="font-bold text-slate-600">Sultan Water Analytics</span>
+                    <span>Berdasarkan transaksi lunas (tidak termasuk pesanan batal)</span>
+                    <span class="font-bold text-slate-600">Sultan Water</span>
                 </div>
             </div>
 
-            <!-- KANAN: BREAKDOWN BEBAN OPERASIONAL (3 KATEGORI) -->
+            <!-- KANAN: RINCIAN PENGELUARAN (3 KATEGORI) -->
             <div
                 class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between pb-4 border-b border-slate-100">
                         <div>
-                            <h3 class="text-base font-black text-slate-900 tracking-tight">Breakdown Beban</h3>
-                            <p class="text-xs text-slate-400 font-medium">Rincian 3 kelompok pengeluaran</p>
+                            <h3 class="text-base font-black text-slate-900 tracking-tight">Rincian Pengeluaran</h3>
+                            <p class="text-xs text-slate-400 font-medium">Berdasarkan 3 kategori biaya</p>
                         </div>
                         <a href="{{ route('admin.expenses.index') }}"
                             class="text-xs font-black text-blue-600 hover:underline">
@@ -357,7 +346,7 @@
                     </div>
 
                     <div class="mt-5 space-y-4">
-                        <!-- Kategori 1: Kemasan & Produksi -->
+                        <!-- Kategori 1 -->
                         <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
                             <div class="flex justify-between items-center text-xs">
                                 <span class="font-extrabold text-slate-700">1. Kemasan & Produksi</span>
@@ -369,7 +358,7 @@
                             <p class="text-[11px] text-slate-400 mt-1">Tutup galon segel, galon fisik, tisu galon</p>
                         </div>
 
-                        <!-- Kategori 2: Operasional & Logistik -->
+                        <!-- Kategori 2 -->
                         <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
                             <div class="flex justify-between items-center text-xs">
                                 <span class="font-extrabold text-slate-700">2. Operasional & Logistik</span>
@@ -382,7 +371,7 @@
                             </p>
                         </div>
 
-                        <!-- Kategori 3: Beban Tetap -->
+                        <!-- Kategori 3 -->
                         <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
                             <div class="flex justify-between items-center text-xs">
                                 <span class="font-extrabold text-slate-700">3. Beban Tetap</span>
@@ -396,12 +385,12 @@
                     </div>
                 </div>
 
-                <!-- Navigasi Cepat Admin -->
+                <!-- Navigasi Cepat -->
                 <div class="pt-5 border-t border-slate-100 mt-5">
                     <a href="{{ route('admin.expenses.index') }}"
                         class="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-list-check text-xs"></i>
-                        <span>Buka Riwayat Beban Operasional</span>
+                        <span>Lihat Riwayat Pengeluaran</span>
                     </a>
                 </div>
             </div>

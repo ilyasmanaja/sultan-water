@@ -179,12 +179,13 @@
                             <td class="py-3.5 px-4 text-slate-400 font-medium" x-text="order.time"></td>
                             <td class="py-3.5 px-4">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase"
-                                        :class="order.order_type === 'ambil_sendiri' ? 'bg-slate-100 text-slate-700' :
-                                            'bg-amber-100 text-amber-800'"
-                                        x-text="order.order_type === 'ambil_sendiri' ? 'Walk-in' : 'Antar'"></span>
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase border"
+                                        :class="order.order_type === 'ambil_sendiri' ?
+                                            'bg-blue-50 text-blue-700 border-blue-200' :
+                                            'bg-amber-50 text-amber-800 border-amber-200'"
+                                        x-text="order.order_type === 'ambil_sendiri' ? 'Ambil Sendiri' : 'Pesan Antar'"></span>
 
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold"
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold capitalize"
                                         :class="{
                                             'bg-emerald-50 text-emerald-700 border border-emerald-200': order
                                                 .delivery_status === 'selesai',
@@ -193,10 +194,9 @@
                                             'bg-blue-50 text-blue-700 border border-blue-200': order
                                                 .delivery_status === 'diantar'
                                         }"
-                                        x-text="order.delivery_status"></span>
+                                        x-text="order.delivery_status === 'pending' ? 'Menunggu' : order.delivery_status"></span>
                                 </div>
                             </td>
-                            <!-- SESUDAH: -->
                             <td class="py-3.5 px-4">
                                 <template x-if="order.customer_id">
                                     <a :href="'/customers/' + order.customer_id"
@@ -216,7 +216,7 @@
                                 <div class="font-bold text-slate-800" x-text="order.tier_name"></div>
                                 <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
                                     <span class="font-bold text-slate-700"
-                                        x-text="order.qty + 'x @ ' + rupiah(order.total_amount / order.qty)"></span>
+                                        x-text="order.qty > 0 ? (order.qty + 'x @ ' + rupiah(order.total_amount / order.qty)) : 'Pengembalian Fisik'"></span>
                                     <span
                                         :class="{
                                             'text-emerald-600 font-semibold': order.gallon_action === 'tukar_seimbang',
@@ -231,10 +231,10 @@
                                 x-text="rupiah(order.total_amount)"></td>
                             <td class="py-3.5 px-4 text-center">
                                 <span
-                                    class="px-2.5 py-1 rounded-full font-black text-[10px] tracking-wide uppercase inline-flex items-center gap-1"
+                                    class="px-2.5 py-1 rounded-full font-black text-[10px] tracking-wide uppercase inline-flex items-center gap-1 border"
                                     :class="order.payment_status === 'lunas' ?
-                                        'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                        'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'">
+                                        'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                        'bg-rose-50 text-rose-700 border-rose-200 animate-pulse'">
                                     <i class="fa-solid text-[9px]"
                                         :class="order.payment_status === 'lunas' ? 'fa-check' : 'fa-clock'"></i>
                                     <span x-text="order.payment_status === 'lunas' ? 'Lunas' : 'Belum Lunas (COD)'"></span>
@@ -298,7 +298,7 @@
                                 'bg-slate-50 text-slate-600 border border-slate-200'"
                             class="p-2.5 rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer">
                             <i class="fa-solid fa-store"></i>
-                            <span>Walk-in (Ambil Sendiri)</span>
+                            <span>Ambil Sendiri</span>
                         </button>
                         <button type="button" @click="newOrder.orderType = 'pesan_antar'"
                             :class="newOrder.orderType === 'pesan_antar' ? 'bg-blue-600 text-white font-black shadow-xs' :
@@ -325,7 +325,7 @@
                     </div>
                     <select x-model="newOrder.customerId"
                         class="w-full min-h-[42px] px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500">
-                        <option value="">👤 Pelanggan Umum (Walk-in)</option>
+                        <option value="">👤 Pelanggan Umum</option>
                         <template x-for="c in customers" :key="c.id">
                             <option :value="c.id" x-text="c.name + ' (' + c.whatsapp + ')'"></option>
                         </template>
@@ -406,7 +406,7 @@
                                         'bg-slate-50 border-slate-200 text-slate-600'"
                                     class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
                                     <i class="fa-solid fa-hand-holding text-amber-600"></i>
-                                    <span>Pinjam (+Gp)</span>
+                                    <span>Pinjam Galon</span>
                                 </button>
 
                                 <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
@@ -416,7 +416,7 @@
                                         'bg-slate-50 border-slate-200 text-slate-600'"
                                     class="p-2 rounded-2xl border text-xs transition flex items-center justify-center gap-1.5 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
                                     <i class="fa-solid fa-rotate-left text-purple-600"></i>
-                                    <span>Kembali (-Gp)</span>
+                                    <span>Kembali Galon</span>
                                 </button>
 
                                 <button type="button" :disabled="newOrder.tierCode === 'galon_baru_isi'"
@@ -527,8 +527,7 @@
 
                         <p class="text-[11px] text-purple-800 font-medium leading-relaxed">
                             <i class="fa-solid fa-circle-info mr-1"></i>
-                            Retur murni mengurangi saldo galon pinjaman pelanggan (Gp) tanpa memotong stok tutup dan tagihan
-                            adalah Rp0.
+                            Retur murni mengurangi saldo pinjaman galon pelanggan tanpa memotong stok tutup dan tagihan Rp0.
                         </p>
                     </div>
                 </template>
@@ -581,12 +580,12 @@
                 <div class="flex justify-between">
                     <span class="text-slate-400">Pelanggan</span>
                     <span class="font-bold text-slate-800"
-                        x-text="selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum (Walk-in)'"></span>
+                        x-text="selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum'"></span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-400">Layanan</span>
                     <span class="font-bold text-slate-800"
-                        x-text="newOrder.orderType === 'ambil_sendiri' ? 'Walk-in (Ambil Sendiri)' : 'Pesan Antar (Kurir)'"></span>
+                        x-text="newOrder.orderType === 'ambil_sendiri' ? 'Ambil Sendiri' : 'Pesan Antar (Kurir)'"></span>
                 </div>
                 <template x-if="!isPureReturn">
                     <div class="flex justify-between">
@@ -611,7 +610,7 @@
                 <p
                     class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-triangle-exclamation text-amber-500 shrink-0"></i>
-                    <span>Pesanan Walk-in langsung selesai dan <strong>tidak dapat dibatalkan</strong>.</span>
+                    <span>Pesanan Ambil Sendiri langsung selesai dan <strong>tidak dapat dibatalkan</strong>.</span>
                 </p>
             </template>
 
@@ -996,9 +995,9 @@
                         case 'tukar_seimbang':
                             return '• Tukar 1:1';
                         case 'pinjam':
-                            return `• Pinjam (+${gallonQty} Gp)`;
+                            return `• Pinjam (+${gallonQty} Galon)`;
                         case 'kembalikan':
-                            return `• Kembali (-${gallonQty} Gp)`;
+                            return `• Kembali (-${gallonQty} Galon)`;
                         default:
                             return '• Bawa Sendiri';
                     }
