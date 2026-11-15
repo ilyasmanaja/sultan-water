@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Master Tier Harga - Sultan Water')
-@section('page-title', 'Master Tier Harga')
-@section('page-subtitle', 'Pengaturan nominal 5 varian tier harga & status aktif')
+@section('title', 'Kelola Daftar Harga Galon - Sulthan Air Rebus')
+@section('page-title', 'Daftar Harga Galon')
+@section('page-subtitle', 'Atur harga jual air isi ulang dan pembelian galon baru')
 
 @section('page-badge')
     <span
         class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
-        Admin Only
+        Khusus Pemilik
     </span>
 @endsection
 
@@ -55,11 +55,9 @@
             <div class="text-xs text-blue-900 leading-relaxed">
                 <div class="font-extrabold text-blue-950 mb-0.5">Ketentuan Pembaruan Harga:</div>
                 <p class="font-medium">
-                    Perubahan harga langsung berlaku untuk transaksi kasir baru berikutnya tanpa perlu restart server.
-                    Transaksi lama tetap menggunakan harga histori transaksi (<em class="font-semibold">snapshot</em>).
-                    Setiap kategori (<code class="px-1 py-0.5 bg-blue-100/70 rounded text-[11px]">isi_ulang</code> & <code
-                        class="px-1 py-0.5 bg-blue-100/70 rounded text-[11px]">galon_baru</code>) wajib memiliki minimal
-                    satu tier harga yang aktif.
+                    Perubahan harga langsung berlaku untuk transaksi baru. Riwayat transaksi lama tetap menyimpan harga pada
+                    saat transaksi terjadi. Minimal satu harga pada masing-masing kategori (Air Isi Ulang & Galon Baru)
+                    harus tetap aktif.
                 </p>
             </div>
         </div>
@@ -68,11 +66,11 @@
         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                    <h2 class="text-base sm:text-lg font-black text-slate-900">Daftar Tier Harga POS</h2>
-                    <p class="text-xs text-slate-400 font-medium">Total 5 varian harga produk depot</p>
+                    <h2 class="text-base sm:text-lg font-black text-slate-900">Varian Harga Jual</h2>
+                    <p class="text-xs text-slate-400 font-medium">Tersedia 5 pilihan harga untuk kasir dan kurir</p>
                 </div>
                 <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl"
-                    x-text="tiers.length + ' Tier Terdaftar'"></span>
+                    x-text="tiers.length + ' Varian Harga'"></span>
             </div>
 
             <div class="overflow-x-auto touch-scroll">
@@ -80,7 +78,6 @@
                     <thead>
                         <tr
                             class="border-b border-slate-100 bg-slate-50/70 text-[11px] font-black uppercase tracking-wider text-slate-400">
-                            <th class="py-3 px-5">Kode</th>
                             <th class="py-3 px-4">Nama Tier</th>
                             <th class="py-3 px-4">Kategori Produk</th>
                             <th class="py-3 px-4 text-right">Harga Saat Ini</th>
@@ -91,9 +88,6 @@
                     <tbody class="divide-y divide-slate-100 text-xs">
                         <template x-for="tier in tiers" :key="tier.id">
                             <tr class="hover:bg-slate-50/80 transition">
-                                <!-- Kolom Kode -->
-                                <td class="py-4 px-5 font-mono font-bold text-slate-600" x-text="tier.code"></td>
-
                                 <!-- Kolom Nama -->
                                 <td class="py-4 px-4 font-black text-slate-900 text-sm" x-text="tier.name"></td>
 
@@ -158,9 +152,8 @@
             <!-- Header Modal -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block"
-                        x-text="'Kode: ' + editForm.code"></span>
-                    <h3 class="text-base sm:text-lg font-black text-slate-900 mt-0.5" x-text="'Ubah ' + editForm.name"></h3>
+                    <h3 class="text-base sm:text-lg font-black text-slate-900" x-text="'Ubah ' + editForm.name"></h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Sesuaikan nominal harga jual dan status aktifnya</p>
                 </div>
                 <button type="button" @click="closeModal()"
                     class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs cursor-pointer">
@@ -192,16 +185,16 @@
                             class="w-full min-h-[44px] pl-10 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-2xl font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <p class="text-[11px] text-slate-400 mt-1 font-medium">
-                        Format: angka bilangan bulat positif (contoh: 5000)[cite: 1].
+                        Masukkan angka tanpa titik atau koma (contoh: 5000).
                     </p>
                 </div>
 
                 <!-- Saklar Status Aktif / Nonaktif -->
                 <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
                     <div>
-                        <span class="text-xs font-bold text-slate-800 block">Status Aktif Tier</span>
-                        <span class="text-[11px] text-slate-400 font-medium">Jika nonaktif, kasir tidak dapat memilih tier
-                            ini[cite: 1].</span>
+                        <span class="text-xs font-bold text-slate-800 block">Status Aktif Harga</span>
+                        <span class="text-[11px] text-slate-400 font-medium">Jika nonaktif, pilihan harga ini tidak akan
+                            muncul di kasir dan kurir.</span>
                     </div>
 
                     <!-- Toggle Switch Berbasis Alpine.js -->
@@ -290,8 +283,10 @@
                         ).length;
 
                         if (activeCountSameCategory === 0) {
+                            const categoryLabel = this.editingTier.applies_to === 'isi_ulang' ? 'Air Isi Ulang' :
+                                'Galon Baru + Isi';
                             this.errorMessage =
-                                `Kategori ${this.editingTier.applies_to} minimal harus memiliki satu tier harga yang aktif.`;
+                                `Kategori ${categoryLabel} minimal harus memiliki satu harga yang aktif.`;
                             return;
                         }
                     }

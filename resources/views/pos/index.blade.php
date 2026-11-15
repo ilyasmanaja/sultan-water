@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'POS Kasir - Sultan Water')
+@section('title', 'POS Kasir - Sulthan Air Rebus')
 
 @section('body-attributes')
     x-data="posApp({{ Js::from($orders ?? []) }}, {{ Js::from($customers ?? []) }}, {{ Js::from($priceTiers ?? []) }}, {{ $tutupStock ?? 1000 }}, {{ $totalGalonDepot ?? 50 }})"
@@ -84,7 +84,7 @@
     </style>
 @endpush
 
-@section('page-title', 'Kasir Penjualan Sultan Water')
+@section('page-title', 'Kasir Penjualan Sulthan Air Rebus')
 
 @section('page-subtitle')
     <span x-text="todayDate"></span>
@@ -697,7 +697,7 @@
 
             <!-- TAMPILAN KHUSUS CETAK STRUK (MONOKROM) -->
             <div class="print-only text-center pb-3 border-b border-dashed border-black">
-                <h2 class="text-base font-black tracking-wider uppercase">SULTAN WATER</h2>
+                <h2 class="text-base font-black tracking-wider uppercase">SULTHAN AIR REBUS</h2>
                 <p class="text-[10px]">Depot Air Minum Isi Ulang</p>
                 <p class="text-[9px] mt-0.5" x-text="todayDate"></p>
             </div>

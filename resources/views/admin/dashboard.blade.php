@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard Pemilik - Sultan Water')
+@section('title', 'Dashboard Pemilik - Sulthan Air Rebus')
 
 @section('body-attributes')
     x-data="ownerDashboardApp()"
@@ -326,7 +326,7 @@
                 <div
                     class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
                     <span>Berdasarkan transaksi lunas (tidak termasuk pesanan batal)</span>
-                    <span class="font-bold text-slate-600">Sultan Water</span>
+                    <span class="font-bold text-slate-600">Sulthan Air Rebus</span>
                 </div>
             </div>
 

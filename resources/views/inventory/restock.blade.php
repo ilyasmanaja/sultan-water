@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Restock & Kelola Galon - Sultan Water')
+@section('title', 'Restock & Kelola Galon - Sulthan Air Rebus')
 
 @section('body-attributes')
     x-data="restockApp({{ $capStock ?? 0 }}, {{ $fleetTotal ?? 0 }})"
 @endsection
 
-@section('page-title', 'Restock & Inventaris Galon')
+@section('page-title', 'Restock Tutup & Galon')
 
 @section('page-badge')
     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
@@ -137,7 +137,7 @@
                     </div>
 
                     <p class="text-xs text-slate-500 font-medium mt-3 leading-relaxed">
-                        Catat penambahan stok tutup galon baru hasil belanja/kulakan inventaris depot.
+                        Catat tambahan stok tutup galon baru yang baru dibeli.
                     </p>
                 </div>
 
@@ -196,7 +196,7 @@
                             </div>
                             <div>
                                 <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-50 text-emerald-700">
-                                    Tambah Aset Galon
+                                    TAMBAH GALON BARU
                                 </span>
                                 <h2 class="text-base font-black text-slate-900 mt-0.5">
                                     Beli Galon Baru
@@ -215,7 +215,7 @@
                     </div>
 
                     <p class="text-xs text-slate-500 font-medium mt-3 leading-relaxed">
-                        Catat pembelian galon baru dari distributor untuk menambah total kepemilikan aset depot.
+                        Catat pembelian galon kosong baru dari distributor untuk menambah stok depot.
                     </p>
                 </div>
 
@@ -245,13 +245,13 @@
                     <!-- Pilihan Alokasi Restock -->
                     <div>
                         <label for="allocation" class="block text-xs font-bold text-slate-600 mb-1.5">
-                            Tujuan Galon Baru <span class="text-rose-500">*</span>
+                            Peruntukan Galon <span class="text-rose-500">*</span>
                         </label>
                         <select id="allocation" name="allocation" x-model="allocation" required
                             class="w-full min-h-[42px] px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            <option value="">-- Pilih Tujuan Alokasi --</option>
-                            <option value="armada_depot">Armada Depot (Pinjaman / Standby Rolling)</option>
-                            <option value="stok_dijual">Stok Dijual (Beli Putus Pelanggan)</option>
+                            <option value="">-- Pilih Peruntukan --</option>
+                            <option value="armada_depot">Operasional Depot (Dipakai Putar & Dipinjamkan)</option>
+                            <option value="stok_dijual">Stok Jual (Untuk Pelanggan Beli Putus)</option>
                         </select>
                     </div>
 
@@ -276,7 +276,7 @@
                             </div>
                             <div>
                                 <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-rose-50 text-rose-700">
-                                    Pengurangan Aset
+                                    GALON RUSAK
                                 </span>
                                 <h2 class="text-base font-black text-slate-900 mt-0.5">
                                     Galon Rusak / Pecah
@@ -286,13 +286,13 @@
 
                         <!-- Status Badge -->
                         <div class="text-right bg-rose-50/70 px-3 py-1.5 rounded-2xl border border-rose-200/60 shrink-0">
-                            <span class="text-[9px] font-bold uppercase tracking-wider text-rose-500 block">Afkir Fisik</span>
-                            <span class="text-xs font-black text-rose-700">Potong Aset</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-rose-500 block">PENGURANGAN STOK</span>
+                            <span class="text-xs font-black text-rose-700">Kurangi Stok</span>
                         </div>
                     </div>
 
                     <p class="text-xs text-slate-500 font-medium mt-3 leading-relaxed">
-                        Catat galon depot yang pecah, bocor, atau tidak layak pakai. Mengurangi total kepemilikan galon depot secara permanen.
+                        Catat galon milik depot yang pecah atau bocor. Jumlah galon depot akan otomatis dikurangi.
                     </p>
                 </div>
 
@@ -480,27 +480,27 @@
                     return;
                 }
                 if (!this.allocation) {
-                    this.validationWarning = 'Tujuan alokasi galon baru wajib dipilih!';
+                    this.validationWarning = 'Peruntukan galon baru wajib dipilih!';
                     return;
                 }
 
                 const allocationLabel = this.allocation === 'stok_dijual' 
-                    ? 'Stok Dijual (Beli Putus)' 
-                    : 'Armada Depot (Rolling/Pinjaman)';
+                    ? 'Stok Jual (Untuk Beli Putus)' 
+                    : 'Operasional Depot (Putar & Pinjam)';
 
                 const futureFleet = (Number(this.fleetTotal) || 0) + Number(this.gallonQty);
 
                 this.confirmModal = {
                     title: 'Konfirmasi Galon Baru',
-                    subtitle: 'Penambahan aset galon fisik depot',
+                    subtitle: 'Penambahan stok galon milik depot',
                     iconClass: 'fa-solid fa-jar',
                     iconColor: 'text-emerald-600',
                     iconBg: 'bg-emerald-50 border-emerald-100',
                     details: [
-                        { label: 'Total Aset Saat Ini', value: (this.fleetTotal || 0).toLocaleString('id-ID') + ' unit' },
+                        { label: 'Total Galon Saat Ini', value: (this.fleetTotal || 0).toLocaleString('id-ID') + ' unit' },
                         { label: 'Beli Galon Baru', value: '+' + Number(this.gallonQty).toLocaleString('id-ID') + ' unit', class: 'text-emerald-600 font-black' },
-                        { label: 'Tujuan Alokasi', value: allocationLabel, class: 'text-slate-800 font-bold' },
-                        { label: 'Aset Total Menjadi', value: futureFleet.toLocaleString('id-ID') + ' unit', class: 'text-emerald-700 font-black' }
+                        { label: 'Peruntukan Galon', value: allocationLabel, class: 'text-slate-800 font-bold' },
+                        { label: 'Total Galon Menjadi', value: futureFleet.toLocaleString('id-ID') + ' unit', class: 'text-emerald-700 font-black' }
                     ],
                     warning: '',
                     warningBoxClass: '',
@@ -528,19 +528,19 @@
 
                 this.confirmModal = {
                     title: 'Catat Galon Rusak?',
-                    subtitle: 'Aset galon depot akan berkurang',
+                    subtitle: 'Jumlah galon milik depot akan dikurangi',
                     iconClass: 'fa-solid fa-trash-can',
                     iconColor: 'text-rose-600',
                     iconBg: 'bg-rose-50 border-rose-100',
                     details: [
-                        { label: 'Total Aset Sekarang', value: (this.fleetTotal || 0).toLocaleString('id-ID') + ' unit' },
-                        { label: 'Jumlah Rusak / Afkir', value: '-' + Number(this.writeOffQty).toLocaleString('id-ID') + ' unit', class: 'text-rose-600 font-black' },
+                        { label: 'Total Galon Sekarang', value: (this.fleetTotal || 0).toLocaleString('id-ID') + ' unit' },
+                        { label: 'Jumlah Rusak / Pecah', value: '-' + Number(this.writeOffQty).toLocaleString('id-ID') + ' unit', class: 'text-rose-600 font-black' },
                         { label: 'Penyebab', value: this.writeOffReason.trim() },
-                        { label: 'Aset Tersisa Nanti', value: futureFleet.toLocaleString('id-ID') + ' unit', class: 'text-slate-900 font-black' }
+                        { label: 'Sisa Galon Depot', value: futureFleet.toLocaleString('id-ID') + ' unit', class: 'text-slate-900 font-black' }
                     ],
-                    warning: 'Tindakan ini permanen memotong buku kepemilikan aset galon depot.',
+                    warning: 'Tindakan ini permanen mengurangi catatan galon milik depot.',
                     warningBoxClass: 'bg-rose-50 text-rose-800 border-rose-200',
-                    btnText: 'Ya, Hapus Aset',
+                    btnText: 'Ya, Kurangi Stok',
                     btnClass: 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20',
                     targetFormId: 'form-write-off'
                 };

@@ -8,6 +8,11 @@ use App\Services\ReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportExportController extends Controller
@@ -25,21 +30,18 @@ class ReportExportController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
 
-        // Validasi format tanggal
-        $validated = $request->validate([
+        $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $summary = $this->reportService->getFinancialSummary($startDate, $endDate);
 
-        // Ambil rincian beban operasional dalam periode
         $expenses = Expense::with('createdBy')
             ->whereBetween('expense_date', [$startDate, $endDate])
             ->orderBy('expense_date', 'asc')
             ->get();
 
-        // Render view PDF menggunakan DomPDF
         $pdf = Pdf::loadView('reports.pdf', [
             'summary' => $summary,
             'expenses' => $expenses,
@@ -48,14 +50,13 @@ class ReportExportController extends Controller
             'printedAt' => Carbon::now()->translatedFormat('d F Y H:i'),
         ])->setPaper('a4', 'portrait');
 
-        $filename = "Laporan-Keuangan-Sultan-Water_{$startDate}_sd_{$endDate}.pdf";
+        $filename = "Laporan-Keuangan-Sulthan-Air-Rebus_{$startDate}_sd_{$endDate}.pdf";
 
         return $pdf->download($filename);
     }
 
     /**
-     * Ekspor Rekapitulasi Laporan ke format Spreadsheet (CSV/Excel).
-     * Menggunakan UTF-8 BOM agar kompatibel langsung dengan Microsoft Excel.
+     * Ekspor Rekapitulasi Laporan ke format Excel asli (.xlsx) dengan styling rapi.
      */
     public function exportExcel(Request $request): StreamedResponse
     {
@@ -67,7 +68,6 @@ class ReportExportController extends Controller
         $startDateTime = Carbon::parse($startDate)->startOfDay();
         $endDateTime = Carbon::parse($endDate)->endOfDay();
 
-        // Ambil daftar transaksi penjualan lunas non-batal
         $orders = Order::with('customer')
             ->where('payment_status', 'lunas')
             ->where('delivery_status', '!=', Order::STATUS_BATAL)
@@ -75,99 +75,233 @@ class ReportExportController extends Controller
             ->oldest()
             ->get();
 
-        // Ambil daftar pengeluaran operasional
         $expenses = Expense::whereBetween('expense_date', [$startDate, $endDate])
             ->orderBy('expense_date', 'asc')
             ->get();
 
-        $filename = "Laporan-Keuangan-Sultan-Water_{$startDate}_sd_{$endDate}.csv";
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Laporan Keuangan');
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
+        // Styling Presets
+        $headerTableStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E293B']],
+            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '64748B']]],
         ];
 
-        return response()->stream(function () use ($summary, $orders, $expenses, $startDate, $endDate) {
-            $handle = fopen('php://output', 'w');
+        $sectionStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '0369A1'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E0F2FE']],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '94A3B8']]],
+        ];
 
-            // Tambahkan UTF-8 BOM agar Excel di Windows membaca karakter tanpa korup
-            fputs($handle, "\xEF\xBB\xBF");
+        $cellBorderStyle = [
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CBD5E1']]],
+        ];
 
-            // 1. HEADER DOKUMEN
-            fputcsv($handle, ['DEPOT AIR MINUM ISI ULANG SULTAN WATER']);
-            fputcsv($handle, ['LAPORAN KEUANGAN & REKAPITULASI OPERASIONAL']);
-            fputcsv($handle, ["Periode: {$startDate} s/d {$endDate}"]);
-            fputcsv($handle, ['Tanggal Cetak: ' . Carbon::now()->translatedFormat('d F Y H:i:s')]);
-            fputcsv($handle, []);
+        $subtotalStyle = [
+            'font' => ['bold' => true],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '94A3B8']]],
+        ];
 
-            // 2. RINGKASAN EKSEKUTIF LABA BERSIH
-            fputcsv($handle, ['=== RINGKASAN KINERJA KEUANGAN (NP = R - E) ===']);
-            fputcsv($handle, ['Komponen', 'Nominal (Rp)', 'Keterangan']);
-            fputcsv($handle, ['Total Omzet Penjualan (R)', $summary['revenue'], 'Order lunas non-batal']);
-            fputcsv($handle, ['Beban Kemasan & Produksi', $summary['breakdown_expenses']['kemasan_produksi'], 'Tutup galon, tisu, galon kosong']);
-            fputcsv($handle, ['Beban Operasional & Logistik', $summary['breakdown_expenses']['operasional_logistik'], 'Bensin, servis, penggantian filter/UV']);
-            fputcsv($handle, ['Beban Beban Tetap', $summary['breakdown_expenses']['beban_tetap'], 'Listrik, air baku tangki, sewa']);
-            fputcsv($handle, ['Total Beban Operasional (E)', $summary['expenses'], 'Akumulasi seluruh beban']);
-            fputcsv($handle, [
-                'Laba Bersih (Net Profit: NP)',
-                $summary['net_profit'],
-                $summary['is_profit'] ? 'SURPLUS / LABA' : 'DEFISIT / RUGI'
-            ]);
-            fputcsv($handle, ['Total Galon Terjual', $summary['total_gallons'] . ' Galon', '']);
-            fputcsv($handle, ['Total Transaksi Selesai', $summary['total_orders'] . ' Transaksi', '']);
-            fputcsv($handle, []);
+        $rupiahFormat = '#,##0';
 
-            // 3. TREN PENJUALAN HARIAN
-            fputcsv($handle, ['=== REKAPITULASI TREN HARIAN ===']);
-            fputcsv($handle, ['Tanggal', 'Omzet Penjualan (Rp)', 'Galon Terjual (Unit)', 'Jumlah Transaksi']);
-            foreach ($summary['daily_trend'] as $day) {
-                fputcsv($handle, [
-                    $day['date'],
-                    $day['revenue'],
-                    $day['total_gallons'],
-                    $day['orders_count']
-                ]);
+        // 1. KOP DOKUMEN
+        $sheet->setCellValue('A1', 'DEPOT AIR MINUM SULTHAN AIR REBUS');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(15)->getColor()->setRGB('0369A1');
+
+        $sheet->setCellValue('A2', 'Perumahan Griya Savana Suka Makmur Blok AD No 5, Pekanbaru, Riau');
+        $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setRGB('475569');
+
+        $periodeText = Carbon::parse($startDate)->translatedFormat('d F Y') . ' s/d ' . Carbon::parse($endDate)->translatedFormat('d F Y');
+        $sheet->setCellValue('A3', "Laporan Keuangan & Operasional | Periode: {$periodeText}");
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(10);
+
+        $sheet->setCellValue('A4', 'Waktu Cetak: ' . Carbon::now()->translatedFormat('d F Y H:i'));
+        $sheet->getStyle('A4')->getFont()->setSize(9)->getColor()->setRGB('64748B');
+
+        // 2. BAGIAN I: RINGKASAN KEUANGAN
+        $row = 6;
+        $sheet->mergeCells("A{$row}:D{$row}");
+        $sheet->setCellValue("A{$row}", 'I. RINGKASAN KEUANGAN DEPOT');
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($sectionStyle);
+
+        $row++;
+        $sheet->setCellValue("A{$row}", 'Komponen Keuangan');
+        $sheet->setCellValue("B{$row}", 'Nominal (Rp)');
+        $sheet->mergeCells("C{$row}:D{$row}");
+        $sheet->setCellValue("C{$row}", 'Keterangan');
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($headerTableStyle);
+        $sheet->getStyle("B{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+        $summaryRows = [
+            ['Total Omzet Penjualan', $summary['revenue'], 'Total pemasukan transaksi lunas', true, false],
+            ['   • Kemasan & Produksi', $summary['breakdown_expenses']['kemasan_produksi'] ?? 0, 'Tutup galon segel, galon baru, tisu', false, false],
+            ['   • Operasional & Logistik', $summary['breakdown_expenses']['operasional_logistik'] ?? 0, 'Bensin kurir, servis, ganti filter & lampu UV', false, false],
+            ['   • Beban Tetap', $summary['breakdown_expenses']['beban_tetap'] ?? 0, 'Listrik depot, air baku tangki, sewa tempat', false, false],
+            ['Total Pengeluaran Operasional', $summary['expenses'], 'Total seluruh pengeluaran operasional', true, true],
+        ];
+
+        foreach ($summaryRows as [$label, $val, $desc, $isBold, $isSubtotal]) {
+            $row++;
+            $sheet->setCellValue("A{$row}", $label);
+            $sheet->setCellValue("B{$row}", (float) $val);
+            $sheet->mergeCells("C{$row}:D{$row}");
+            $sheet->setCellValue("C{$row}", $desc);
+
+            $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($isSubtotal ? $subtotalStyle : $cellBorderStyle);
+            $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode($rupiahFormat);
+            if ($isBold) {
+                $sheet->getStyle("A{$row}:B{$row}")->getFont()->setBold(true);
             }
-            fputcsv($handle, []);
+        }
 
-            // 4. RINCIAN PENGELUARAN OPERASIONAL
-            fputcsv($handle, ['=== RINCIAN PENGELUARAN OPERASIONAL (EXPENSES) ===']);
-            fputcsv($handle, ['Tanggal', 'Kategori', 'Judul Pengeluaran', 'Nominal (Rp)', 'Catatan / Keterangan']);
+        // Baris Laba Bersih
+        $row++;
+        $sheet->setCellValue("A{$row}", 'LABA BERSIH DEPOT');
+        $sheet->setCellValue("B{$row}", (float) $summary['net_profit']);
+        $sheet->mergeCells("C{$row}:D{$row}");
+        $sheet->setCellValue("C{$row}", $summary['is_profit'] ? 'UNTUNG / LABA' : 'RUGI / DEFISIT');
+
+        $profitBg = $summary['is_profit'] ? 'DCFCE7' : 'FEE2E2';
+        $profitColor = $summary['is_profit'] ? '166534' : '991B1B';
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => $profitColor]],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $profitBg]],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '94A3B8']]],
+        ]);
+        $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode($rupiahFormat);
+
+        // Statistik Fisik
+        $row++;
+        $sheet->setCellValue("A{$row}", 'Total Galon Terjual');
+        $sheet->setCellValue("B{$row}", number_format($summary['total_gallons'], 0, ',', '.') . ' Galon');
+        $sheet->mergeCells("C{$row}:D{$row}");
+        $sheet->setCellValue("C{$row}", 'Total transaksi lunas: ' . number_format($summary['total_orders'], 0, ',', '.') . ' transaksi');
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($cellBorderStyle);
+        $sheet->getStyle("A{$row}:B{$row}")->getFont()->setBold(true);
+        $sheet->getStyle("B{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+        // 3. BAGIAN II: REKAPITULASI PENJUALAN HARIAN
+        $row += 2;
+        $sheet->mergeCells("A{$row}:D{$row}");
+        $sheet->setCellValue("A{$row}", 'II. REKAPITULASI PENJUALAN HARIAN');
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($sectionStyle);
+
+        $row++;
+        $sheet->setCellValue("A{$row}", 'Tanggal');
+        $sheet->setCellValue("B{$row}", 'Omzet Harian (Rp)');
+        $sheet->setCellValue("C{$row}", 'Volume Galon');
+        $sheet->setCellValue("D{$row}", 'Jumlah Transaksi');
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($headerTableStyle);
+        $sheet->getStyle("B{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle("C{$row}:D{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        foreach ($summary['daily_trend'] as $day) {
+            $row++;
+            $sheet->setCellValue("A{$row}", Carbon::parse($day['date'])->translatedFormat('d F Y'));
+            $sheet->setCellValue("B{$row}", (float) $day['revenue']);
+            $sheet->setCellValue("C{$row}", (int) $day['total_gallons'] . ' Galon');
+            $sheet->setCellValue("D{$row}", (int) $day['orders_count'] . ' Transaksi');
+
+            $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($cellBorderStyle);
+            $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode($rupiahFormat);
+            $sheet->getStyle("C{$row}:D{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        // 4. BAGIAN III: RINCIAN PENGELUARAN OPERASIONAL
+        $row += 2;
+        $sheet->mergeCells("A{$row}:E{$row}");
+        $sheet->setCellValue("A{$row}", 'III. RINCIAN PENGELUARAN OPERASIONAL');
+        $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($sectionStyle);
+
+        $row++;
+        $sheet->setCellValue("A{$row}", 'Tanggal');
+        $sheet->setCellValue("B{$row}", 'Kategori');
+        $sheet->setCellValue("C{$row}", 'Judul Pengeluaran');
+        $sheet->setCellValue("D{$row}", 'Catatan / Keterangan');
+        $sheet->setCellValue("E{$row}", 'Nominal (Rp)');
+        $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($headerTableStyle);
+        $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+        if ($expenses->isEmpty()) {
+            $row++;
+            $sheet->mergeCells("A{$row}:E{$row}");
+            $sheet->setCellValue("A{$row}", 'Tidak ada catatan pengeluaran pada periode ini.');
+            $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($cellBorderStyle);
+            $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        } else {
             foreach ($expenses as $exp) {
-                fputcsv($handle, [
-                    $exp->expense_date->format('Y-m-d'),
-                    str_replace('_', ' ', strtoupper($exp->category)),
-                    $exp->title,
-                    $exp->amount,
-                    $exp->description ?? '-'
-                ]);
-            }
-            fputcsv($handle, []);
+                $row++;
+                $catLabel = match ($exp->category) {
+                    'kemasan_produksi' => 'Kemasan & Produksi',
+                    'operasional_logistik' => 'Operasional & Logistik',
+                    default => 'Beban Tetap',
+                };
 
-            // 5. RINCIAN TRANSAKSI PENJUALAN
-            fputcsv($handle, ['=== DAFTAR TRANSAKSI PENJUALAN (LUNAS) ===']);
-            fputcsv($handle, ['No. Order', 'Waktu Transaksi', 'Tipe Pesanan', 'Nama Pelanggan', 'Metode Bayar', 'Total Tagihan (Rp)']);
-            foreach ($orders as $ord) {
-                fputcsv($handle, [
-                    'SW-' . str_pad($ord->id, 5, '0', STR_PAD_LEFT),
-                    $ord->created_at->format('Y-m-d H:i'),
-                    str_replace('_', ' ', strtoupper($ord->order_type)),
-                    $ord->customer->name ?? 'Pelanggan Umum',
-                    strtoupper($ord->payment_method),
-                    $ord->total_amount
-                ]);
-            }
+                $sheet->setCellValue("A{$row}", $exp->expense_date->format('d/m/Y'));
+                $sheet->setCellValue("B{$row}", $catLabel);
+                $sheet->setCellValue("C{$row}", $exp->title);
+                $sheet->setCellValue("D{$row}", $exp->description ?: '-');
+                $sheet->setCellValue("E{$row}", (float) $exp->amount);
 
-            fclose($handle);
-        }, 200, $headers);
+                $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($cellBorderStyle);
+                $sheet->getStyle("E{$row}")->getNumberFormat()->setFormatCode($rupiahFormat);
+            }
+        }
+
+        // 5. BAGIAN IV: DAFTAR TRANSAKSI PENJUALAN (LUNAS)
+        $row += 2;
+        $sheet->mergeCells("A{$row}:F{$row}");
+        $sheet->setCellValue("A{$row}", 'IV. DAFTAR TRANSAKSI PENJUALAN (LUNAS)');
+        $sheet->getStyle("A{$row}:F{$row}")->applyFromArray($sectionStyle);
+
+        $row++;
+        $sheet->setCellValue("A{$row}", 'No. Order');
+        $sheet->setCellValue("B{$row}", 'Waktu Transaksi');
+        $sheet->setCellValue("C{$row}", 'Tipe Layanan');
+        $sheet->setCellValue("D{$row}", 'Nama Pelanggan');
+        $sheet->setCellValue("E{$row}", 'Metode Bayar');
+        $sheet->setCellValue("F{$row}", 'Total Tagihan (Rp)');
+        $sheet->getStyle("A{$row}:F{$row}")->applyFromArray($headerTableStyle);
+        $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("F{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+        foreach ($orders as $ord) {
+            $row++;
+            $sheet->setCellValue("A{$row}", 'SW-' . str_pad($ord->id, 5, '0', STR_PAD_LEFT));
+            $sheet->setCellValue("B{$row}", $ord->created_at->format('d/m/Y H:i'));
+            $sheet->setCellValue("C{$row}", $ord->order_type === 'ambil_sendiri' ? 'Ambil Sendiri' : 'Pesan Antar');
+            $sheet->setCellValue("D{$row}", $ord->customer->name ?? 'Pelanggan Umum');
+            $sheet->setCellValue("E{$row}", strtoupper($ord->payment_method));
+            $sheet->setCellValue("F{$row}", (float) $ord->total_amount);
+
+            $sheet->getStyle("A{$row}:F{$row}")->applyFromArray($cellBorderStyle);
+            $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("F{$row}")->getNumberFormat()->setFormatCode($rupiahFormat);
+        }
+
+        // Auto-size lebar kolom A sampai F agar tidak ada teks terpotong atau ########
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = "Laporan-Keuangan-Sulthan-Air-Rebus_{$startDate}_sd_{$endDate}.xlsx";
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 
     /**
      * Menampilkan layout laporan keuangan ramah cetak (print-friendly) ukuran A4.
-     * S4-FE-04 (Tiket #64)
      */
     public function printView(Request $request)
     {
@@ -184,7 +318,6 @@ class ReportExportController extends Controller
         $startDateTime = Carbon::parse($startDate)->startOfDay();
         $endDateTime = Carbon::parse($endDate)->endOfDay();
 
-        // Ambil transaksi penjualan lunas non-batal
         $orders = Order::with('customer')
             ->where('payment_status', 'lunas')
             ->where('delivery_status', '!=', Order::STATUS_BATAL)
@@ -192,7 +325,6 @@ class ReportExportController extends Controller
             ->oldest()
             ->get();
 
-        // Ambil pengeluaran operasional dalam periode
         $expenses = Expense::with('createdBy')
             ->whereBetween('expense_date', [$startDate, $endDate])
             ->orderBy('expense_date', 'asc')

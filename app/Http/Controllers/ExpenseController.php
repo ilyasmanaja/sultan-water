@@ -21,11 +21,14 @@ class ExpenseController extends Controller
         $query = Expense::with('createdBy')->latest('expense_date')->latest('id');
 
         // Filter berdasarkan bulan dan tahun (default: bulan & tahun saat ini)
-        if ($request->filled('month')) {
-            $query->whereMonth('expense_date', $request->integer('month'));
+        $selectedMonth = $request->has('month') ? $request->input('month') : now()->month;
+        $selectedYear = $request->has('year') ? $request->input('year') : now()->year;
+
+        if (!empty($selectedMonth)) {
+            $query->whereMonth('expense_date', (int) $selectedMonth);
         }
-        if ($request->filled('year')) {
-            $query->whereYear('expense_date', $request->integer('year'));
+        if (!empty($selectedYear)) {
+            $query->whereYear('expense_date', (int) $selectedYear);
         }
 
         // Filter berdasarkan kategori (kemasan_produksi, operasional_logistik, beban_tetap)
@@ -63,31 +66,31 @@ class ExpenseController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
-            'title'        => ['required', 'string', 'max:100'],
-            'category'     => ['required', 'in:kemasan_produksi,operasional_logistik,beban_tetap'],
-            'amount'       => ['required', 'numeric', 'min:1'],
+            'title' => ['required', 'string', 'max:100'],
+            'category' => ['required', 'in:kemasan_produksi,operasional_logistik,beban_tetap'],
+            'amount' => ['required', 'numeric', 'min:1'],
             'expense_date' => ['required', 'date'],
-            'description'  => ['nullable', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:1000'],
         ], [
-            'title.required'        => 'Judul pengeluaran wajib diisi.',
-            'title.max'             => 'Judul pengeluaran maksimal 100 karakter.',
-            'category.required'     => 'Kategori pengeluaran wajib dipilih.',
-            'category.in'           => 'Kategori pengeluaran tidak valid (pilih: kemasan_produksi, operasional_logistik, atau beban_tetap).',
-            'amount.required'       => 'Nominal pengeluaran wajib diisi.',
-            'amount.numeric'        => 'Nominal pengeluaran harus berupa angka.',
-            'amount.min'            => 'Nominal pengeluaran minimal Rp1.',
+            'title.required' => 'Judul pengeluaran wajib diisi.',
+            'title.max' => 'Judul pengeluaran maksimal 100 karakter.',
+            'category.required' => 'Kategori pengeluaran wajib dipilih.',
+            'category.in' => 'Kategori pengeluaran tidak valid (pilih: kemasan_produksi, operasional_logistik, atau beban_tetap).',
+            'amount.required' => 'Nominal pengeluaran wajib diisi.',
+            'amount.numeric' => 'Nominal pengeluaran harus berupa angka.',
+            'amount.min' => 'Nominal pengeluaran minimal Rp1.',
             'expense_date.required' => 'Tanggal pengeluaran wajib diisi.',
-            'expense_date.date'     => 'Format tanggal pengeluaran tidak valid.',
-            'description.max'       => 'Deskripsi pengeluaran maksimal 1000 karakter.',
+            'expense_date.date' => 'Format tanggal pengeluaran tidak valid.',
+            'description.max' => 'Deskripsi pengeluaran maksimal 1000 karakter.',
         ]);
 
         $expense = Expense::create([
-            'title'        => $validated['title'],
-            'category'     => $validated['category'],
-            'amount'       => $validated['amount'],
+            'title' => $validated['title'],
+            'category' => $validated['category'],
+            'amount' => $validated['amount'],
             'expense_date' => $validated['expense_date'],
-            'description'  => $validated['description'] ?? null,
-            'created_by'   => Auth::id(),
+            'description' => $validated['description'] ?? null,
+            'created_by' => Auth::id(),
         ]);
 
         $message = "Pengeluaran \"{$expense->title}\" sebesar Rp " . number_format($expense->amount, 0, ',', '.') . " berhasil dicatat.";
@@ -96,7 +99,7 @@ class ExpenseController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'data'    => $expense,
+                'data' => $expense,
             ], 201);
         }
 

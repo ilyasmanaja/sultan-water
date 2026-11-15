@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Direktori Pelanggan & Galon Pinjaman - Sultan Water')
+@section('title', 'Data Pelanggan & Galon Pinjaman - Sulthan Air Rebus')
 
-@section('page-title', 'Direktori Pelanggan & Galon Pinjaman')
+@section('page-title', 'Data Pelanggan & Galon Pinjaman')
 
 @section('page-badge')
     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
-        Aset Armada (Gp)
+        Pinjaman Galon
     </span>
 @endsection
 
 @section('page-subtitle')
-    <span>Pemantauan seluruh pelanggan dan daftar aset unit galon fisik depot yang sedang dipinjam</span>
+    <span>Daftar seluruh pelanggan beserta catatan galon depot yang sedang dipinjam</span>
 @endsection
 
 @section('header-actions')
@@ -34,14 +34,14 @@
         <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
                 <span class="text-[10px] font-black uppercase tracking-wider text-amber-700 block mb-1">
-                    Total Galon Dipinjam (Gp)
+                    TOTAL GALON DIPINJAM
                 </span>
                 <div class="text-2xl sm:text-3xl font-black text-amber-900">
                     {{ number_format($totalBorrowedActive, 0, ',', '.') }}
                     <span class="text-xs font-bold text-amber-600">Unit</span>
                 </div>
                 <p class="text-[11px] text-slate-400 font-medium mt-1">
-                    Unit fisik galon di tangan pelanggan
+                    Jumlah galon depot yang sedang dibawa pelanggan
                 </p>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shadow-xs border border-amber-100">
@@ -60,7 +60,7 @@
                     <span class="text-xs font-bold text-slate-400">Orang</span>
                 </div>
                 <p class="text-[11px] text-slate-400 font-medium mt-1">
-                    Memiliki saldo pinjaman &gt; 0
+                    Pelanggan yang masih membawa galon depot
                 </p>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shadow-xs border border-blue-100">
@@ -76,10 +76,10 @@
                 </span>
                 <div class="text-2xl sm:text-3xl font-black text-slate-900">
                     {{ number_format($totalCustomers, 0, ',', '.') }}
-                    <span class="text-xs font-bold text-slate-400">Akun</span>
+                    <span class="text-xs font-bold text-slate-400">Pelanggan</span>
                 </div>
                 <p class="text-[11px] text-slate-400 font-medium mt-1">
-                    Basis data pelanggan aktif depot
+                    Total pelanggan yang sudah tercatat
                 </p>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center text-xl shadow-xs border border-slate-200">
@@ -143,7 +143,7 @@
                         <th class="py-3 px-4 sm:px-6">Nama Pelanggan</th>
                         <th class="py-3 px-4">Kontak WhatsApp</th>
                         <th class="py-3 px-4">Alamat Pengantaran</th>
-                        <th class="py-3 px-4 text-center">Status Galon Pinjaman (Gp)</th>
+                        <th class="py-3 px-4 text-center">GALON DIPINJAM</th>
                         <th class="py-3 px-4 text-center">Aksi</th>
                     </tr>
                 </thead>
