@@ -459,7 +459,7 @@
                         </div>
                         <div>
                             <h4 class="font-bold text-slate-800">Alamat Lengkap</h4>
-                            <p class="text-slate-600">Perumahan Griya Savana SukaMakmur Blok AD No 5</p>
+                            <p class="text-slate-600">Perumahan Griya Savana Suka Makmur Blok AD No 5</p>
                         </div>
                     </div>
 

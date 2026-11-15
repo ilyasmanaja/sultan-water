@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
-@section('title', 'Laporan Keuangan - Sultan Water')
+@section('title', 'Laporan Keuangan - Sulthan Air Rebus')
 
-@section('page-title', 'Laporan Finansial & Operasional')
+@section('page-title', 'Laporan Keuangan & Operasional')
 
 @section('page-badge')
     <span
         class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
-        Admin Only
+        Khusus Pemilik
     </span>
 @endsection
 
 @section('page-subtitle')
-    <span>Rekapitulasi omzet penjualan, pos biaya operasional, dan laba bersih depot</span>
+    <span>Rekapitulasi pemasukan penjualan, rincian pengeluaran, dan laba bersih depot</span>
 @endsection
 
 @section('header-actions')
@@ -79,7 +79,7 @@
             <!-- Omzet -->
             <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
                 <span class="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
-                    Total Omzet (R)
+                    Total Omzet
                 </span>
                 <div class="text-2xl font-black text-slate-900">
                     Rp {{ number_format($summary['revenue'], 0, ',', '.') }}
@@ -93,7 +93,7 @@
             <!-- Beban -->
             <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
                 <span class="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
-                    Beban Operasional (E)
+                    Total Pengeluaran
                 </span>
                 <div class="text-2xl font-black text-slate-900">
                     Rp {{ number_format($summary['expenses'], 0, ',', '.') }}
@@ -108,11 +108,11 @@
                 class="bg-white rounded-3xl p-5 border {{ $summary['is_profit'] ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20' }} shadow-xs">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                        Laba Bersih (NP = R - E)
+                        Laba Bersih
                     </span>
                     <span
                         class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase {{ $summary['is_profit'] ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
-                        {{ $summary['is_profit'] ? 'Surplus' : 'Defisit' }}
+                        {{ $summary['is_profit'] ? 'Untung' : 'Rugi' }}
                     </span>
                 </div>
                 <div class="text-2xl font-black {{ $summary['is_profit'] ? 'text-emerald-600' : 'text-rose-600' }}">
@@ -127,7 +127,7 @@
         <!-- Rincian Breakdown Beban per 3 Kategori -->
         <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6">
             <h3 class="text-base font-black text-slate-900 tracking-tight mb-4">
-                Rincian Beban Operasional per Kategori
+                Rincian Pengeluaran per Kategori
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -251,8 +251,8 @@
                                 <!-- Tipe Pesanan -->
                                 <td class="py-3.5 px-4 whitespace-nowrap">
                                     <span
-                                        class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase {{ $order->order_type === 'ambil_sendiri' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800' }}">
-                                        {{ $order->order_type === 'ambil_sendiri' ? 'Walk-in' : 'Pesan Antar' }}
+                                        class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase {{ $order->order_type === 'ambil_sendiri' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-amber-100 text-amber-800' }}">
+                                        {{ $order->order_type === 'ambil_sendiri' ? 'Ambil Sendiri' : 'Pesan Antar' }}
                                     </span>
                                 </td>
 
@@ -274,9 +274,14 @@
                                 <td class="py-3.5 px-4">
                                     @foreach ($order->items as $item)
                                         <div class="text-[11px] text-slate-700">
-                                            <span
-                                                class="font-bold">{{ $item->priceTier->name ?? ($item->product->name ?? 'Air Minum') }}</span>
-                                            <span class="text-slate-400">({{ $item->quantity }}x)</span>
+                                            @if ($item->quantity === 0)
+                                                <span class="font-bold text-purple-700">Retur Galon Murni</span>
+                                                <span class="text-slate-400">({{ $item->gallon_qty }} Galon)</span>
+                                            @else
+                                                <span
+                                                    class="font-bold">{{ $item->priceTier->name ?? ($item->product->name ?? 'Air Minum') }}</span>
+                                                <span class="text-slate-400">({{ $item->quantity }}x)</span>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </td>

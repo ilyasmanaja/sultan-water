@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Antrean Kurir - Sultan Water')
+@section('title', 'Antrean Kurir - Sulthan Air Rebus')
 @section('page-title', 'Antrean Pengantaran')
-@section('page-subtitle', 'Daftar pengiriman aktif ramah sentuhan layar HP')
+@section('page-subtitle', 'Daftar pesanan yang perlu diantar ke pelanggan')
 
 @section('page-badge')
     <span
@@ -301,7 +301,7 @@
                                     'bg-slate-50 border-slate-200 text-slate-600'"
                                 class="p-2 rounded-2xl border text-xs flex flex-col items-center justify-center gap-1 min-h-[48px] cursor-pointer">
                                 <i class="fa-solid fa-hand-holding text-amber-600"></i>
-                                <span>Pinjam (+Gp)</span>
+                                <span>Pinjam Galon</span>
                             </button>
 
                             <button type="button" @click="setCompleteAction('kembalikan')"
@@ -310,7 +310,7 @@
                                     'bg-slate-50 border-slate-200 text-slate-600'"
                                 class="p-2 rounded-2xl border text-xs flex flex-col items-center justify-center gap-1 min-h-[48px] cursor-pointer">
                                 <i class="fa-solid fa-rotate-left text-purple-600"></i>
-                                <span>Kembali (-Gp)</span>
+                                <span>Kembali Galon</span>
                             </button>
                         </div>
                     </div>
@@ -439,7 +439,7 @@
                                 <span class="px-2 py-0.5 rounded-md text-[10px] font-black"
                                     :class="cust.borrowed_gallons > 0 ? 'bg-amber-100 text-amber-800' :
                                         'bg-slate-100 text-slate-500'"
-                                    x-text="'Pinjam: ' + cust.borrowed_gallons + ' Gp'"></span>
+                                    x-text="'Pinjam: ' + cust.borrowed_gallons + ' Galon'"></span>
                             </button>
                         </template>
                     </div>
@@ -601,8 +601,7 @@
 
                         <p class="text-[11px] text-purple-800 font-medium leading-relaxed">
                             <i class="fa-solid fa-circle-info mr-1"></i>
-                            Retur murni mengurangi saldo galon pinjaman pelanggan (Gp) tanpa memotong stok tutup dan tagihan
-                            adalah Rp0.
+                            Retur murni mengurangi saldo pinjaman galon pelanggan tanpa memotong stok tutup dan tagihan Rp0.
                         </p>
                     </div>
                 </template>
@@ -654,7 +653,7 @@
                 <div class="flex justify-between">
                     <span class="text-slate-400">Pelanggan</span>
                     <span class="font-bold text-slate-800"
-                        x-text="selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum (Walk-in)'"></span>
+                        x-text="selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum'"></span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-400">Layanan</span>
@@ -852,9 +851,9 @@
                         case 'tukar_seimbang':
                             return '• Tukar 1:1';
                         case 'pinjam':
-                            return `• Pinjam (+${qty} Gp)`;
+                            return `• Pinjam (+${qty} Galon)`;
                         case 'kembalikan':
-                            return `• Kembali (-${qty} Gp)`;
+                            return `• Kembali (-${qty} Galon)`;
                         default:
                             return '';
                     }
